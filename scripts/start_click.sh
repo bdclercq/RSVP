@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd /home/student/click/scripts/
+cd /home/student/Desktop/RSVP/scripts/
 
 ../userlevel/click glue.click &
 ../userlevel/click -p 10001 host1.click &
