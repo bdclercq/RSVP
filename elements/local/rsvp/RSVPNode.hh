@@ -10,7 +10,7 @@
 
 CLICK_DECLS
 
-class RSVPNode{
+class RSVPNode: public Element{
 private:
     IPAddress address;
     uint16_t in_port;

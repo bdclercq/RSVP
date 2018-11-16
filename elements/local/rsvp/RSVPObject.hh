@@ -7,194 +7,221 @@
 
 CLICK_DECLS
 
+struct int24{
+    unsigned int data : 24;
+};
+
 class Session{
 private:
-    IPAddress dest_addr;
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
     uint16_t id_type = 257; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
+    IPAddress dest_addr;
     uint8_t protocol_id;
     uint8_t flags;
     uint16_t dstport;
 public:
-    void addData(uint32_t w){data.push_back(w);}
     Session(){}
-    Session(uint16_t l, IPAddress da, uint8_t p, uint8_t f, uint16_t dp){length=l;dest_addr=da;protocol_id=p;flags=f;dstport=dp;}
+    Session(IPAddress da, uint8_t p, uint8_t f, uint16_t dp, uint16_t l=4){length=l;dest_addr=da;protocol_id=p;flags=f;dstport=dp;}
     ~Session(){}
+    void assign(const Session& s){this->length=s.getLength();this->id_type=s.getIDType();this->dest_addr=s.getDestAddr();this->protocol_id=s.getProtocolID();this->flags=s.getFlags();this->dstport=s.getDstPort();}
+    IPAddress getDestAddr()const{ return this->dest_addr;}
+    uint8_t getProtocolID()const{ return this->protocol_id;}
+    uint8_t getFlags()const{ return this->flags;}
+    uint16_t getDstPort()const{ return this->dstport;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class RSVP_HOP{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 769; // ID = 3, ctype = 1
+    uint16_t id_type = 769; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     IPAddress addr;
     IPAddress LIH;  // Logical Interface Handle
 public:
-    void addData(uint32_t w){data.push_back(w);}
     RSVP_HOP(){}
-    RSVP_HOP(uint16_t l, IPAddress a, IPAddress lh){length=l;addr=a;LIH=lh;}
+    RSVP_HOP(IPAddress a, IPAddress lh, uint16_t l=4){length=l;addr=a;LIH=lh;}
     ~RSVP_HOP(){}
+    void assign(const RSVP_HOP& hop){this->length=hop.getLength();this->id_type=hop.getIDType();this->addr=hop.getAddr();this->LIH=hop.getLIH();}
+    IPAddress getAddr()const{ return this->addr;}
+    IPAddress getLIH()const{ return this->LIH;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void setAddr(IPAddress ipAddress){this->addr=ipAddress;}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class Integrity{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 1024; // ID = 4
+    uint16_t id_type = 1024; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    Integrity(){}
-    Integrity(uint16_t l){length=l;}
+    Integrity(uint16_t l=4){length=l;}
     ~Integrity(){}
-};
-
-class TimeValues{
-private:
-    Vector<uint32_t> data;
-    uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 1281; // ID = 5, ctype = 1
-    uint32_t refPer;  // Refresh period in ms
-public:
+    void assign(const Integrity& i){this->length=i.getLength();this->id_type=i.getIDType();}
     void addData(uint32_t w){data.push_back(w);}
-    TimeValues(){}
-    TimeValues(uint16_t l, uint32_t r){length=l;refPer=r;}
-    ~TimeValues(){}
-};
-
-class ErrorSpec{
-private:
-    Vector<uint32_t> data;
-    uint16_t length = 4;     // Minimum length of 4
-    IPAddress ENA;  // Error Node Address
-    uint16_t id_type = 1537; // ID = 6, ctype = 1
-    uint8_t flags;
-    uint8_t EC;  // Error code
-    uint16_t EV;  // Error value
-public:
-    void addData(uint32_t w){data.push_back(w);}
-    ErrorSpec(){}
-    ErrorSpec(uint16_t l, IPAddress addr, uint8_t f, uint8_t ec, uint16_t ev){length=l;ENA=addr; flags=f;EC=ec;EV=ev;}
-    ~ErrorSpec(){}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
 };
 
 class Scope{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
+    uint16_t id_type = 1793; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     Vector<IPAddress> addresses;
-    uint16_t id_type = 1793; // ID = 7, ctype = 1
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    Scope(){}
-    Scope(uint16_t l){length=l;}
+    Scope(uint16_t l=4){length=l;}
     void addAddr(IPAddress addr){addresses.push_back(addr);}
     ~Scope(){}
+    Vector<IPAddress> getAddresses()const{ return this->addresses;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void assign(const Scope& s){this->length=s.getLength();this->id_type=s.getIDType();this->addresses=s.getAddresses();}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class Style{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2049; // ID = 8, ctype = 1
+    uint16_t id_type = 2049; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     uint8_t flags;
-    uint24_t options;
+    int24 options;
 public:
-    void addData(uint32_t w){data.push_back(w);}
     Style(){}
-    Style(uint16_t l, uint8_t f, uint2
-    _t o){length=l;flags=f;options=o;}
+    Style(uint8_t f, int24 o, uint16_t l=4){length=l;flags=f;options=o;}
     ~Style(){}
+    uint8_t getFlags()const{ return this->flags;}
+    int24 getOptions()const{ return this->options;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void assign(const Style& s){this->length=s.getLength();this->id_type=s.getIDType();this->flags=s.getFlags();this->options=s.getOptions();}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class Flowspec{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2305; // ID = 9, ctype = 1
+    uint16_t id_type = 2305; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    Flowspec(){}
-    Flowspec(uint16_t l){length=l;}
+    Flowspec(uint16_t l=4){length=l;}
     ~Flowspec(){}
+    void assign(const Flowspec& f){this->length=f.getLength();this->id_type=f.getIDType();}
+    void addData(uint32_t w){data.push_back(w);}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
 };
 
 class Filterspec{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2561; // ID = 10, ctype = 1
+    uint16_t id_type = 2561; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     IPAddress src;
     uint16_t srcPort;
 public:
-    void addData(uint32_t w){data.push_back(w);}
     Filterspec(){}
-    Filterspec(uint16_t l, IPAddress addr, uint16_t port){length=l;src=addr;srcPort=port;}
+    Filterspec(IPAddress addr, uint16_t port, uint16_t l=4){length=l;src=addr;srcPort=port;}
     ~Filterspec(){}
+    IPAddress getSrc()const{ return this->src;}
+    uint16_t getSrcPort()const{ return this->srcPort;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void assign(const Filterspec& f){this->length=f.getLength();this->id_type=f.getIDType();this->src=f.getSrc();this->srcPort=f.getSrcPort();}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class Sendertemplate{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2817; // ID = 11, ctype = 1
+    uint16_t id_type = 2817; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     IPAddress src;
     uint16_t srcPort;
 public:
-    void addData(uint32_t w){data.push_back(w);}
     Sendertemplate(){}
-    Sendertemplate(uint16_t l, IPAddress addr, uint16_t port){length=l;src=addr;srcPort=port;}
+    Sendertemplate(IPAddress addr, uint16_t port, uint16_t l=4){length=l;src=addr;srcPort=port;}
     ~Sendertemplate(){}
+    IPAddress getSrc()const{ return this->src;}
+    uint16_t getSrcPort()const{ return this->srcPort;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void assign(const Sendertemplate& s){this->length=s.getLength();this->id_type=s.getIDType();this->src=s.getSrc();this->srcPort=s.getSrcPort();}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 class SenderTSpec{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3074; // ID = 12, ctype = 2
+    uint16_t id_type = 3074; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     // See RFC2210
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    SenderTSpec(){}
-    SenderTSpec(uint16_t l){length=l;}
+    SenderTSpec(uint16_t l=4){length=l;}
     ~SenderTSpec(){}
+    void assign(const SenderTSpec& s){this->length=s.getLength();this->id_type=s.getIDType();}
+    void addData(uint32_t w){data.push_back(w);}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
 };
 
 class ADSpec{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3330; // ID = 13, ctype = 2
+    uint16_t id_type = 3330; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    ADSpec(){}
-    ADSpec(uint16_t l){length=l;}
+    ADSpec(uint16_t l=4){length=l;}
     ~ADSpec(){}
+    void assign(const ADSpec& a){this->length=a.getLength();this->id_type=a.getIDType();}
+    void addData(uint32_t w){data.push_back(w);}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
 };
 
 class PolicyData{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3585; // ID = 14, ctype = 1
+    uint16_t id_type = 3585; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
 public:
-    void addData(uint32_t w){data.push_back(w);}
-    PolicyData(){}
-    PolicyData(uint16_t l){length=l;}
+    PolicyData(uint16_t l=4){length=l;}
     ~PolicyData(){}
+    void assign(const PolicyData& p){this->length=p.getLength();this->id_type=p.getIDType();}
+    void addData(uint32_t w){data.push_back(w);}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
 };
 
 class Resvconfirm{
 private:
-    Vector<uint32_t> data;
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3841; // ID = 15, ctype = 1
+    uint16_t id_type = 3841; // ID = 1, ctype = 1
+    Vector<uint32_t> data;
+
     IPAddress receiveraddr;
 public:
-    void addData(uint32_t w){data.push_back(w);}
     Resvconfirm(){}
-    Resvconfirm(uint16_t l, IPAddress addr){length=l;receiveraddr=addr;}
+    Resvconfirm(IPAddress addr, uint16_t l=4){length=l;receiveraddr=addr;}
     ~Resvconfirm(){}
+    IPAddress getReceiver()const{ return this->receiveraddr;}
+    uint16_t getLength()const{ return this->length;}
+    uint16_t getIDType()const{ return this->id_type;}
+    void assign(const Resvconfirm& r){this->receiveraddr=r.getReceiver();this->length=r.getLength();this->id_type=r.getIDType();}
+    void addData(uint32_t w){data.push_back(w);}
 };
 
 CLICK_ENDDECLS

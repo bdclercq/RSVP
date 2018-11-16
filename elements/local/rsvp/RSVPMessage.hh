@@ -19,13 +19,27 @@ struct CommonHeader{
     uint16_t length;
 };
 
-class RSVPMessage{
-private:
+struct RSVPMessage{
     CommonHeader ch;
-    Vector<RSVPObject> objects;
-public:
-    RSVPMessage();
-    ~RSVPMessage();
+    Vector<void*> objects;
+};
+
+struct PathMessage{
+    CommonHeader ch;
+    Integrity integrity;    // Optional
+    Session session;
+    RSVP_HOP hop;           // Contains previous HOP address and LIH
+    Vector<PolicyData> PD;  // Optional
+    Sendertemplate STemp;
+    SenderTSpec STSpec;
+    IPAddress src;
+    IPAddress dest;
+    uint16_t in_port;
+    uint16_t out_port;
+};
+
+struct ResvMessage{
+    CommonHeader ch;
 };
 
 CLICK_ENDDECLS

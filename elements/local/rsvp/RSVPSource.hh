@@ -5,11 +5,12 @@
 #ifndef CLICK_RSVPSOURCE_HH
 #define CLICK_RSVPSOURCE_HH
 
-#include "PathMessage.hh"
+#include "RSVPMessage.hh"
+#include "PathState.hh"
 
 CLICK_DECLS
 
-class RSVPSource{
+class RSVPSource: public Element{
 private:
     IPAddress address;
     IPAddress dst;
@@ -28,6 +29,7 @@ public:
     int configure(Vector<String>&, ErrorHandler*);
 
     void push(int, Packet* p);
+    Packet* make_packet(Packet* p);
 };
 
 CLICK_ENDDECLS
