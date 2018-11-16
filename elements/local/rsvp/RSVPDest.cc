@@ -10,13 +10,13 @@
 #include <clicknet/udp.h>
 #include <clicknet/ether.h>
 
-#include "RSVPSource.hh"
+#include "RSVPDest.hh"
 
 CLICK_DECLS
 
-RSVPSource::RSVPSource() {}
+RSVPDest::RSVPDest() {}
 
-int RSVPSource::configure(Vector <String> &conf, ErrorHandler *errh) {
+int RSVPDest::configure(Vector <String> &conf, ErrorHandler *errh) {
     if (Args(conf, this, errh)
                 .read_mp("ADDR", address)
                 .read_mp("INPORT", in_port)
@@ -25,7 +25,7 @@ int RSVPSource::configure(Vector <String> &conf, ErrorHandler *errh) {
                 .complete() < 0)
         return -1;
 
-    click_chatter("RSVPSource initialized with ");
+    click_chatter("RSVPDest initialized with ");
     click_chatter(address.unparse().c_str());
     click_chatter(String(in_port).c_str());
     click_chatter(dst.unparse().c_str());
@@ -33,9 +33,9 @@ int RSVPSource::configure(Vector <String> &conf, ErrorHandler *errh) {
     return 0;
 }
 
-RSVPSource::~RSVPSource() {}
+RSVPDest::~RSVPDest() {}
 
-Packet* RSVPSource::make_packet(Packet* p) {
+Packet* RSVPDest::make_packet(Packet* p) {
 
     click_chatter("Creating packet at source");
 
@@ -85,8 +85,8 @@ Packet* RSVPSource::make_packet(Packet* p) {
     return q;
 }
 
-void RSVPSource::push(int, Packet *p) {
-    click_chatter("Pushing packet at RSVPSource %i-%s-%i", in_port, address.unparse().c_str(), out_port);
+void RSVPDest::push(int, Packet *p) {
+    click_chatter("Pushing packet at RSVPDest %i-%s-%i", in_port, address.unparse().c_str(), out_port);
 
     Packet* q = make_packet(p);
 
@@ -94,4 +94,4 @@ void RSVPSource::push(int, Packet *p) {
 }
 
 CLICK_ENDDECLS
-EXPORT_ELEMENT(RSVPSource)
+EXPORT_ELEMENT(RSVPDest)

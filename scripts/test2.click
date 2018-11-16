@@ -1,0 +1,7 @@
+AddressInfo(host1_address 192.168.10.1/24 00:00:00:00:10:01);
+AddressInfo(host2_address 192.168.11.1/24 00:00:00:00:11:01);
+
+pingsource::ICMPPingSource(host1_address, host2_address, INTERVAL 0.2, LIMIT 20);
+rsvpsource::RSVPSource(192.168.10.1, 24, 192.168.11.1, 24);
+
+pingsource -> rsvpsource -> ToDump(test2.pcap);
