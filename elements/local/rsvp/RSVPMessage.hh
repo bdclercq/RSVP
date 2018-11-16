@@ -24,7 +24,7 @@ struct RSVPMessage{
     Vector<void*> objects;
 };
 
-struct PathMessage{
+struct PathMessageHeader{
     CommonHeader ch;
     Integrity integrity;    // Optional
     Session session;
@@ -38,7 +38,7 @@ struct PathMessage{
     uint16_t out_port;
 };
 
-struct ResvMessage{
+struct ResvMessageHeader{
     CommonHeader ch;
 };
 

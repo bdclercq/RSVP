@@ -27,7 +27,7 @@ RSVPSource::~RSVPSource() {}
 
 Packet* RSVPSource::make_packet(Packet* p) {
     int headroom = sizeof(click_ip) + sizeof(CommonHeader);
-    int p_size = sizeof(PathMessage);
+    int p_size = sizeof(PathMessageHeader);
     WritablePacket* q = Packet::make(headroom, 0, p_size, 0);
 
     if (q == 0)
