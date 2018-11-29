@@ -17,10 +17,6 @@ struct CommonHeader{
     uint16_t checksum;
     uint8_t send_ttl;   // IP TTL with which message was sent
     uint16_t length;
-};
-
-struct RSVPMessage{
-    CommonHeader ch;
     Vector<void*> objects;
 };
 
@@ -32,14 +28,15 @@ struct PathMessageHeader{
     Vector<PolicyData> PD;  // Optional
     Sendertemplate STemp;
     SenderTSpec STSpec;
-    IPAddress src;
-    IPAddress dest;
-    uint16_t in_port;
-    uint16_t out_port;
 };
 
 struct ResvMessageHeader{
-    CommonHeader ch;
+    Integrity integrity;    // Optional
+    Session session;
+    RSVP_HOP hop;           // Contains previous HOP address and LIH
+
+    Vector<PolicyData> PD;  // Optional
+
 };
 
 CLICK_ENDDECLS

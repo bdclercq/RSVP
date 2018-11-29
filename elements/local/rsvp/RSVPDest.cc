@@ -37,10 +37,12 @@ RSVPDest::~RSVPDest() {}
 
 Packet* RSVPDest::make_packet(Packet* p) {
 
-    click_chatter("Creating packet at source");
+    click_chatter("Creating path message");
+
+    click_ip* p_ip = (click_ip*)p->data();
 
     int headroom = sizeof(click_ether) + 4;
-    int p_size = sizeof(click_ip) + sizeof(click_udp) + sizeof(CommonHeader) + sizeof(PathMessageHeader);
+    int p_size = sizeof(click_ip) + sizeof(CommonHeader) + sizeof(PathMessageHeader);
     WritablePacket* q = Packet::make(headroom, 0, p_size, 0);
 
     if (q == 0)
@@ -48,39 +50,57 @@ Packet* RSVPDest::make_packet(Packet* p) {
 
     memset(q->data(), '\0', p_size);
 
-    click_chatter("Setting fields of packet");
+    click_chatter("Setting fields of Path Header");
+
+    uint16_t ipid = ((_generator) % 0xFFFF) + 1;
 
     //ip fields
     click_ip* ip = (click_ip*)q->data();
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
     ip->ip_len = htons(q->length());
-    //ip->ip_id = 0;
-    //ip->ip_p = IP_PROTO_UDP;
-    ip->ip_src = address;
-    ip->ip_dst = dst;
-    //ip->ip_tos = 0;
-    //ip->ip_off = 0;
-    ip->ip_ttl = 64;
+    ip->ip_id = ipid;
+    ip->ip_p = IP_PROTO_RSVP;
+    ip->ip_src = p_ip->ip_src;
+    ip->ip_dst = p_ip->ip_dst;
+    ip->ip_tos = 32;
+    ip->ip_off = 1;
+    ip->ip_ttl = p_ip->ip_ttl;
     ip->ip_sum = click_in_cksum((unsigned char*) ip, sizeof(click_ip));
 
     q->set_dst_ip_anno(ip->ip_dst);
 
-    click_udp* udp = (click_udp*)(ip + 1);
-    udp->uh_sport = htons(in_port);
-    udp->uh_dport = htons(out_port);
-    udp->uh_ulen = htons(q->length() - sizeof(click_ip));
-
-    CommonHeader* ch = (CommonHeader*)(udp+1);
+    CommonHeader* ch = (CommonHeader*)(ip+1);
 
     ch->send_ttl = ip->ip_ttl;
     ch->msg_type = 1;
     ch->version_flags = 16;
-    ch->length = 0;
-    ch->checksum = 0;   //TODO fix checksum
+    ch->length = sizeof(CommonHeader);
+    ch->checksum = click_in_cksum((unsigned char*) ch, sizeof(CommonHeader));
 
-    udp->uh_sum = click_in_cksum_pseudohdr(click_in_cksum((unsigned char*)udp, p_size - sizeof(click_ip)), ip, p_size - sizeof(click_ip));
 
+    PathMessageHeader* ph = (PathMessageHeader*)(ch+1);
+
+    // Set Session
+    ph->session.dest_addr = ip->ip_dst;
+    ph->session.protocol_id = ip->ip_id;
+    ph->session.flags = 1;
+    ph->session.dstport = 0;
+
+    // Set SenderTemplate
+    ph->STemp.src = ip->ip_src;
+    ph->STemp.srcPort = 0;
+
+    // Set SenderTSpec
+    ph->STSpec.version.data = 0;
+    ph->STSpec.total_length = p_size;
+    ph->STSpec.service = 1;
+    ph->STSpec.service_length = p_size;
+    ph->STSpec.r = 1;
+    ph->STSpec.b = 2;
+    ph->STSpec.p = p_size;
+    ph->STSpec.m = p_size;
+    ph->STSpec.M = p_size;
 
     return q;
 }

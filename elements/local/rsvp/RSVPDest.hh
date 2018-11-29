@@ -18,6 +18,8 @@ private:
     uint16_t out_port;
     PathState pState;
 
+    uint32_t _generator = 0;
+
 public:
     RSVPDest();
     ~RSVPDest();

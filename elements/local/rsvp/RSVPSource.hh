@@ -15,22 +15,29 @@ class RSVPSource: public Element{
 private:
     IPAddress address;
     IPAddress dst;
-    uint16_t in_port;
-    uint16_t out_port;
+//    uint16_t in_port;
+//    uint16_t out_port;
     PathState pState;
+
+    uint32_t _generator = 0;
 
 public:
     RSVPSource();
     ~RSVPSource();
 
     const char *class_name() const { return "RSVPSource"; }
-    const char *port_count() const { return "1/1"; }
+    const char *port_count() const { return "0-1/1"; }
     const char *processing() const { return PUSH; }
 
     int configure(Vector<String>&, ErrorHandler*);
 
     void push(int, Packet* p);
-    Packet* make_packet(Packet* p);
+    static int push_packet(Element* e);
+//    int push_packet();
+    Packet* make_packet();
+    WritablePacket* addCommonHeader(WritablePacket* p);
+
+    void add_handlers();
 };
 
 CLICK_ENDDECLS
