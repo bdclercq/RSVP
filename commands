@@ -1,0 +1,5 @@
+sudo ./userlevel/click scripts/test2.click -p 1001
+
+telnet localhost 1001
+    readlist
+    write rsvpsource.setRSVP ADDR 127.0.0.1, DST 127.0.0.2

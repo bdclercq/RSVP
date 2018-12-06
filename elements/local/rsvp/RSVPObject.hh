@@ -15,9 +15,18 @@ struct uint4_t{
     unsigned int data : 4;
 };
 
+struct CommonHeader{
+    uint8_t version_flags = 16; // version = 1, no flags
+    uint8_t msg_type;   // 1 = path, 2 = resv, 3 = patherr, 4 = resverr, 5 = pathtear, 6 = resvtear, 7 = resvconf
+    uint16_t checksum;
+    uint8_t send_ttl;   // IP TTL with which message was sent
+    uint16_t length;
+};
+
 struct Session{
-    uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 257; // ID = 1, ctype = 1
+    uint16_t length;     // Minimum length of 4
+    uint8_t Class = 1;
+    uint8_t C_type = 1;
 
     IPAddress dest_addr;
     uint8_t protocol_id;
@@ -26,28 +35,40 @@ struct Session{
 };
 
 struct RSVP_HOP{
-    uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 769; // ID = 1, ctype = 1
+    uint16_t length;     // Minimum length of 4
+    uint8_t Class = 3;
+    uint8_t C_type = 1;
 
-    IPAddress addr;
-    IPAddress LIH;  // Logical Interface Handle
+    uint32_t addr;
+    uint32_t LIH;  // Logical Interface Handle
+};
+
+struct Time_Value{
+    uint16_t length;
+    uint8_t Class = 5;
+    uint8_t C_type = 1;
+
+    uint32_t period;
 };
 
 struct Integrity{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 1024; // ID = 1, ctype = 1
+    uint8_t Class = 4;
+    uint8_t C_type = 1;
 };
 
 struct Scope{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 1793; // ID = 1, ctype = 1
+    uint8_t Class = 7;
+    uint8_t C_type = 1;
 
-    Vector<IPAddress> addresses;
+    Vector<uint32_t> addresses;
 };
 
 struct Style{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2049; // ID = 1, ctype = 1
+    uint8_t Class = 8;
+    uint8_t C_type = 1;
 
     uint8_t flags;
     uint24_t options;
@@ -55,7 +76,8 @@ struct Style{
 
 struct Flowspec{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2305; // ID = 1, ctype = 1
+    uint8_t Class = 9;
+    uint8_t C_type = 2;
 
     // See RFC2210
     uint4_t version;
@@ -74,28 +96,33 @@ struct Flowspec{
 
 struct Filterspec{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2561; // ID = 1, ctype = 1
+    uint8_t Class = 10;
+    uint8_t C_type = 1;
 
-    IPAddress src;
+    uint32_t src;
     uint16_t srcPort;
 };
 
 struct Sendertemplate{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 2817; // ID = 1, ctype = 1
+    uint8_t Class = 11;
+    uint8_t C_type = 1;
 
     IPAddress src;
+    uint16_t reserved;
     uint16_t srcPort;
 };
 
 struct SenderTSpec{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3074; // ID = 1, ctype = 1
+    uint8_t Class = 12;
+    uint8_t C_type = 2;
 
     // See RFC2210
-    uint4_t version;
+    uint16_t version;
     uint16_t total_length;
     uint8_t service = 1;
+    uint8_t reserved;
     uint16_t service_length;
     uint8_t param_id = 127;
     uint8_t param_flags = 0;
@@ -110,15 +137,16 @@ struct SenderTSpec{
 
 struct PolicyData{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3585; // ID = 1, ctype = 1
-
+    uint8_t Class = 14;
+    uint8_t C_type = 1;
 };
 
 struct Resvconfirm{
     uint16_t length = 4;     // Minimum length of 4
-    uint16_t id_type = 3841; // ID = 1, ctype = 1
+    uint8_t Class = 15;
+    uint8_t C_type = 1;
 
-    IPAddress receiveraddr;
+    uint32_t receiveraddr;
 };
 
 CLICK_ENDDECLS
