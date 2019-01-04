@@ -9,6 +9,7 @@
 #include <click/element.hh>
 #include<click/string.hh>
 #include<click/timer.hh>
+#include <map>
 #include "PathState.hh"
 #include "RSVPObject.hh"
 
@@ -20,6 +21,9 @@ private:
     IPAddress dst;
     uint16_t in_port;
     uint16_t out_port;
+
+    // Map <address, port> pairs to session IDs
+    std::map<int, std::pair<IPAddress, uint16_t>> sessions;
 
     uint32_t _generator = 0;
     PathState state;

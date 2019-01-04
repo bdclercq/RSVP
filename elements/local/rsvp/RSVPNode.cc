@@ -33,6 +33,8 @@ void RSVPNode::push(int, Packet *p) {
     Session* session = (Session*)(ch+1);
     RSVP_HOP* rsvp_hop = (RSVP_HOP*)(session+1);
 
+    Session s = *session;
+
     // If packet is a Path or Resv Message, update states
     if (ch->msg_type == 1 ){
         // Path message
@@ -44,7 +46,7 @@ void RSVPNode::push(int, Packet *p) {
         state.out_port = session->dstport;
         state.HOP_addr = rsvp_hop->addr;
         state.HOP_LIH = rsvp_hop->LIH;
-        pstates.push_back(state);
+//        pstates.insert(std::pair<Session, PathState>(s, state));
         // Update address in HOP for next node
         rsvp_hop->addr = address;
         output(0).push(p);
@@ -52,21 +54,23 @@ void RSVPNode::push(int, Packet *p) {
     else if(ch->msg_type == 2){
         // Resv message
         // Address in state is address for next hop
-        PathState state;
+        ResvState state;
+//        PathState pathState = pstates[s];
         state.session_dst = session->dest_addr;
         state.session_flags = session->flags;
         state.session_PID = session->protocol_id;
         state.out_port = session->dstport;
         state.HOP_addr = rsvp_hop->addr;
         state.HOP_LIH = rsvp_hop->LIH;
-        pstates.push_back(state);
+//        rstates.insert(std::pair<Session, ResvState>(s, state));
         // Update address in HOP for comparison in next node
-        rsvp_hop->addr = address;
+//        rsvp_hop->addr = pathState.HOP_addr;
         output(0).push(p);
     }
     // If packet is path tear message
     else if(ch->msg_type == 5){
-
+//        pstates.erase(pstates.find(s));
+        output(0).push(p);
     }
     // In all other cases: just pass the packet
     else{

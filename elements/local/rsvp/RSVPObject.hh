@@ -32,6 +32,15 @@ struct Session{
     uint8_t protocol_id;
     uint8_t flags;
     uint16_t dstport;
+
+    bool operator==(Session s) const {
+        if(s.length==length && s.Class==Class && s.C_type==C_type && s.dest_addr==dest_addr
+            && s.protocol_id==protocol_id && s.flags==flags && s.dstport==dstport)
+            return true;
+        else
+            return false;
+    }
+
 };
 
 struct RSVP_HOP{

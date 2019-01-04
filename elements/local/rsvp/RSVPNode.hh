@@ -6,8 +6,10 @@
 #define CLICK_RSVPNODE_HH
 
 #include <click/element.hh>
-#include <click/vector.hh>
+#include <map>
+#include "RSVPObject.hh"
 #include "PathState.hh"
+#include "ResvState.h"
 
 CLICK_DECLS
 
@@ -16,8 +18,8 @@ private:
     IPAddress address;
     uint16_t in_port;
     uint16_t out_port;
-    Vector<PathState> pstates;
-//    Vector<
+    std::map<std::pair<IPAddress, uint16_t>, PathState> pstates;
+    std::map<std::pair<IPAddress, uint16_t>, ResvState> rstates;
 
 public:
     RSVPNode();
