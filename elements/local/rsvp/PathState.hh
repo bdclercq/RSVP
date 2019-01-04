@@ -6,10 +6,12 @@
 #define CLICK_PATHSTATE_HH
 
 struct PathState{
-    IPAddress src;
-    IPAddress dst;
-    uint16_t in_port;
+    IPAddress session_dst;
+    uint8_t session_flags;
+    uint8_t session_PID;
     uint16_t out_port;
+    IPAddress HOP_addr;
+    IPAddress HOP_LIH;
 };
 
 #endif //CLICK_PATHSTATE_HH

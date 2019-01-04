@@ -16,9 +16,9 @@ private:
     IPAddress dst;
     uint16_t in_port;
     uint16_t out_port;
-    PathState pState;
 
     uint32_t _generator = 0;
+    PathState state;
 
 public:
     RSVPDest();

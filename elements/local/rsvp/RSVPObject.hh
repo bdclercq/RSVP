@@ -39,8 +39,8 @@ struct RSVP_HOP{
     uint8_t Class = 3;
     uint8_t C_type = 1;
 
-    uint32_t addr;
-    uint32_t LIH;  // Logical Interface Handle
+    IPAddress addr;
+    IPAddress LIH;  // Logical Interface Handle
 };
 
 struct Time_Value{
@@ -71,7 +71,8 @@ struct Style{
     uint8_t C_type = 1;
 
     uint8_t flags;
-    uint24_t options;
+    uint16_t reserved_options;
+    uint8_t available_options;
 };
 
 struct Flowspec{

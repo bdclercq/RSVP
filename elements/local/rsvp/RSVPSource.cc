@@ -90,7 +90,7 @@ Packet *RSVPSource::make_packet(Packet *p) {
     hop->Class = 3;
     hop->C_type = 1;
     hop->addr = address;
-    hop->LIH = address;
+    hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
     Time_Value* time_value = (Time_Value*)(hop+1);

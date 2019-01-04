@@ -6,6 +6,7 @@
 #define CLICK_RSVPNODE_HH
 
 #include <click/element.hh>
+#include <click/vector.hh>
 #include "PathState.hh"
 
 CLICK_DECLS
@@ -15,14 +16,17 @@ private:
     IPAddress address;
     uint16_t in_port;
     uint16_t out_port;
-    PathState pState;
+    Vector<PathState> pstates;
+
+    Vector<Packet*> priority;
+    Vector<Packet*> best_effort;
 
 public:
     RSVPNode();
     ~RSVPNode();
 
     const char *class_name() const { return "RSVPNode"; }
-    const char *port_count() const { return "0-1/0-1"; }
+    const char *port_count() const { return "1/1"; }
     const char *processing() const { return PUSH; }
 
     int configure(Vector<String>&, ErrorHandler*);

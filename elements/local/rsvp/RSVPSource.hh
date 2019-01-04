@@ -14,11 +14,11 @@ CLICK_DECLS
 
 class RSVPSource : public Element {
 private:
-    IPAddress address = IPAddress();
-    IPAddress dst = IPAddress();
-//    bool tos = false;
-//    uint16_t in_port;
-//    uint16_t out_port;
+    IPAddress address;
+    IPAddress dst;
+    bool tos = false;
+    uint16_t in_port;
+    uint16_t out_port;
     PathState pState;
 
     uint32_t _generator = 0;
