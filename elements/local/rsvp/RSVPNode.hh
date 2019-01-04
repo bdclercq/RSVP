@@ -17,9 +17,7 @@ private:
     uint16_t in_port;
     uint16_t out_port;
     Vector<PathState> pstates;
-
-    Vector<Packet*> priority;
-    Vector<Packet*> best_effort;
+//    Vector<
 
 public:
     RSVPNode();

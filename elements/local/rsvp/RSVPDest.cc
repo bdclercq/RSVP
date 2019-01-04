@@ -39,8 +39,8 @@ Packet* RSVPDest::make_packet(Packet* p) {
 
     click_ip* iph = (click_ip*)(p->data());
     CommonHeader* prev_ch = (CommonHeader*)(iph+1);
-    Session* prev_session = (Session*)(ch+1);
-    RSVP_HOP* prev_rsvp_hop = (RSVP_HOP*)(session+1);
+    Session* prev_session = (Session*)(prev_ch+1);
+    RSVP_HOP* prev_rsvp_hop = (RSVP_HOP*)(prev_session+1);
 
     // Set path state
     state.HOP_addr = prev_rsvp_hop->addr;

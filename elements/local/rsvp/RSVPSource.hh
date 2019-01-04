@@ -5,10 +5,12 @@
 #ifndef CLICK_RSVPSOURCE_HH
 #define CLICK_RSVPSOURCE_HH
 
+#include <click/element.hh>
+#include <click/vector.hh>
 #include<click/string.hh>
 #include<click/timer.hh>
-#include "RSVPMessage.hh"
 #include "PathState.hh"
+#include "RSVPObject.hh"
 
 CLICK_DECLS
 

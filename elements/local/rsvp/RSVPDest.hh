@@ -4,9 +4,13 @@
 
 #ifndef RSVP_RSVPDEST_HH
 #define RSVP_RSVPDEST_HH
+
+#include <click/vector.hh>
+#include <click/element.hh>
 #include<click/string.hh>
-#include "RSVPMessage.hh"
+#include<click/timer.hh>
 #include "PathState.hh"
+#include "RSVPObject.hh"
 
 CLICK_DECLS
 
