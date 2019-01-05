@@ -11,6 +11,7 @@
 #include<click/timer.hh>
 #include <map>
 #include "PathState.hh"
+#include "ResvState.h"
 #include "RSVPObject.hh"
 
 CLICK_DECLS
@@ -26,6 +27,8 @@ private:
 
     // Map <address, port> pairs to session IDs
     std::map<int, std::pair<IPAddress, uint16_t>> sessions;
+    std::map<SessionInfo, PathState> pstates;
+    std::map<SessionInfo, ResvState> rstates;
 
     uint32_t _generator = 0;
 //    Timer _timer;
@@ -54,7 +57,7 @@ public:
 
     void setRSVP(IPAddress src, IPAddress dst);
 
-
+    void addSession(int, IPAddress, uint16_t);
 
     void add_handlers();
 };

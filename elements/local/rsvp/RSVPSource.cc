@@ -147,6 +147,10 @@ void RSVPSource::setRSVP(IPAddress src, IPAddress dst) {
     dst = dst;
 }
 
+void RSVPSource::addSession(int sid, IPAddress address, uint16_t port) {
+    sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
+}
+
 static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
     RSVPSource* rsvpsrc = (RSVPSource*)e;
     IPAddress address;
@@ -164,8 +168,28 @@ static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHand
     return 0;
 }
 
+static int setSession(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
+    RSVPSource* rsvpsrc = (RSVPSource*)e;
+    IPAddress address;
+    IPAddress dst;
+    int sid;
+    Vector<String> vec;
+    cp_argvec(conf, vec);
+    if (Args(vec, e, errh)
+                .read_mp("SID", sid)
+                .read_mp("ADDR", address)
+//                .read_mp("INPORT", in_port)
+                .read_mp("DST", dst)
+//                .read_mp("OUTPORT", out_port)
+                .complete() < 0)
+        return -1;
+    rsvpsrc->addSession(sid, address, dst);
+    return 0;
+}
+
 void RSVPSource::add_handlers() {
     add_write_handler("setRSVP", &setRSVPHandler, (void*) 0);
+    add_write_handler("addSession", &setSession, (void*) 0);
 }
 
 CLICK_ENDDECLS
