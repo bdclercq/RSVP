@@ -18,10 +18,12 @@ CLICK_DECLS
 
 class RSVPDest: public Element{
 private:
-    IPAddress address;
-    IPAddress dst;
-    uint16_t in_port;
-    uint16_t out_port;
+//    IPAddress address;
+//    IPAddress dst;
+//    uint16_t in_port;
+//    uint16_t out_port;
+
+    bool sendResv = false;
 
     // Map <address, port> pairs to session IDs
     std::map<int, std::pair<IPAddress, uint16_t>> sessions;
@@ -43,7 +45,7 @@ public:
 
     void push(int, Packet* p);
     Packet* make_packet(Packet* p);
-    void setRSVP(IPAddress src, IPAddress dst);
+    void setRSVP();
     void addSession(int, IPAddress, uint16_t);
     void add_handlers();
 };

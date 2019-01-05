@@ -120,9 +120,8 @@ void RSVPDest::push(int, Packet *p) {
     output(0).push(q);
 }
 
-void RSVPDest::setRSVP(IPAddress src, IPAddress dst) {
-    address = src;
-    dst = dst;
+void RSVPDest::setRSVP() {
+    sendResv = true;
 }
 
 void RSVPDest::addSession(int sid, IPAddress address, uint16_t port) {
@@ -130,24 +129,22 @@ void RSVPDest::addSession(int sid, IPAddress address, uint16_t port) {
 }
 
 static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
-    RSVPDest* rsvpsrc = (RSVPDest*)e;
-    IPAddress address;
-    IPAddress dst;
+    RSVPDest* rsvpdst = (RSVPDest*)e;
     Vector<String> vec;
     cp_argvec(conf, vec);
     if (Args(vec, e, errh)
-                .read_mp("ADDR", address)
+//                .read_mp("ADDR", address)
 //                .read_mp("INPORT", in_port)
-                .read_mp("DST", dst)
+//                .read_mp("DST", dst)
 //                .read_mp("OUTPORT", out_port)
                 .complete() < 0)
         return -1;
-    rsvpsrc->setRSVP(address, dst);
+    rsvpdst->setRSVP();
     return 0;
 }
 
 static int setSessionHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
-    RSVPDest* rsvpsrc = (RSVPDest*)e;
+    RSVPDest* rsvpdst = (RSVPDest*)e;
     IPAddress address;
     IPAddress dst;
     int sid;
@@ -161,7 +158,7 @@ static int setSessionHandler(const String &conf, Element* e, void *thunk, ErrorH
 //                .read_mp("OUTPORT", out_port)
                 .complete() < 0)
         return -1;
-    rsvpsrc->addSession(sid, address, dst);
+    rsvpdst->addSession(sid, address, dst);
     return 0;
 }
 

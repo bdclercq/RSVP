@@ -21,8 +21,7 @@ private:
     IPAddress address;
     IPAddress dst;
     bool tos = false;
-    uint16_t in_port;
-    uint16_t out_port;
+    uint16_t port;
     PathState pState;
 
     // Map <address, port> pairs to session IDs
@@ -55,9 +54,11 @@ public:
 //    int push_packet();
     Packet *make_packet(Packet *p);
 
-    void setRSVP(IPAddress src, IPAddress dst);
+    void setRSVP(IPAddress src, uint16_t port);
 
     void addSession(int, IPAddress, uint16_t);
+
+    int tearPath(int);
 
     void add_handlers();
 };
