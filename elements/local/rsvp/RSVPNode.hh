@@ -18,8 +18,8 @@ private:
     IPAddress address;
     uint16_t in_port;
     uint16_t out_port;
-    std::map<std::pair<IPAddress, uint16_t>, PathState> pstates;
-    std::map<std::pair<IPAddress, uint16_t>, ResvState> rstates;
+    std::map<SessionInfo, PathState> pstates;
+    std::map<SessionInfo, ResvState> rstates;
 
 public:
     RSVPNode();

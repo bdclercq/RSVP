@@ -40,13 +40,18 @@ void RSVPNode::push(int, Packet *p) {
         // Path message
         // Address in state is previous address
         PathState state;
+        SessionInfo si;
         state.session_dst = session->dest_addr;
         state.session_flags = session->flags;
         state.session_PID = session->protocol_id;
         state.out_port = session->dstport;
         state.HOP_addr = rsvp_hop->addr;
         state.HOP_LIH = rsvp_hop->LIH;
-//        pstates.insert(std::pair<Session, PathState>(s, state));
+
+        si.dest_addr = session->dest_addr;
+        si.dstport = session->dstport;
+
+        pstates.insert(std::pair< SessionInfo, PathState>(si, state));
         // Update address in HOP for next node
         rsvp_hop->addr = address;
         output(0).push(p);

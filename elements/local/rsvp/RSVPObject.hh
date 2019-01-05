@@ -15,6 +15,15 @@ struct uint4_t{
     unsigned int data : 4;
 };
 
+struct SessionInfo{
+    uint32_t dest_addr;
+    uint16_t dstport;
+
+    bool operator<(const SessionInfo s) const{
+        return s.dest_addr<dest_addr && s.dstport<dstport;
+    }
+};
+
 struct CommonHeader{
     uint8_t version_flags = 16; // version = 1, no flags
     uint8_t msg_type;   // 1 = path, 2 = resv, 3 = patherr, 4 = resverr, 5 = pathtear, 6 = resvtear, 7 = resvconf
