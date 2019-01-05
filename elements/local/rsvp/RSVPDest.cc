@@ -25,11 +25,6 @@ int RSVPDest::configure(Vector <String> &conf, ErrorHandler *errh) {
                 .complete() < 0)
         return -1;
 
-    click_chatter("RSVPDest initialized with ");
-    click_chatter(address.unparse().c_str());
-    click_chatter(String(in_port).c_str());
-    click_chatter(dst.unparse().c_str());
-    click_chatter(String(out_port).c_str());
     return 0;
 }
 
@@ -89,13 +84,6 @@ Packet* RSVPDest::make_packet(Packet* p) {
 //    click_chatter("Add session to Resv Message");
     Session *session = (Session *) (ch + 1);
     session = prev_session;
-//    session->Class = 1;
-//    session->C_type = 1;
-//    session->length = htons(12);        // (64 body + 16 length + 8 class + 8 ctype) / 8
-//    session->dest_addr = iph->ip_src;
-//    session->protocol_id = ip->ip_p;
-//    session->flags = 0;
-//    session->dstport = htons(0);
 
 //    click_chatter("Add HOP to Resv Message");
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
@@ -125,7 +113,7 @@ Packet* RSVPDest::make_packet(Packet* p) {
 }
 
 void RSVPDest::push(int, Packet *p) {
-    click_chatter("Pushing packet at RSVPDest %i-%s-%i", in_port, address.unparse().c_str(), out_port);
+    click_chatter("Pushing packet at RSVPDest");
 
     Packet* q = make_packet(p);
 
