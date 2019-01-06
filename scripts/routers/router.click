@@ -66,12 +66,24 @@ elementclass Router {
 
 	// Forwarding path for LAN interface
 	rt[1]	-> DropBroadcasts
-		-> lan_paint :: PaintTee(1)
-		-> lan_ipgw :: IPGWOptions($lan_address)
-		-> FixIPSrc($lan_address)
-		-> lan_ttl :: DecIPTTL
-		-> lan_frag :: IPFragmenter(1500)
-		-> [0]lan_arpq;
+	        // Check for TOS
+            -> lan_qos_classifier :: IPClassifier(ip dscp = 1, -)
+            -> lan_qos_queue :: Queue
+            -> [0]lan_scheduler :: PrioSched
+        // For classifying
+        lan_qos_classifier[1]
+            -> lan_be_queue :: Queue
+            -> [1]lan_scheduler
+        // For scheduling
+        lan_scheduler
+            -> LinkUnqueue(0, 1000)
+            -> DropBroadcasts
+            -> lan_paint :: PaintTee(1)
+            -> lan_ipgw :: IPGWOptions($lan_address)
+            -> FixIPSrc($lan_address)
+            -> lan_ttl :: DecIPTTL
+            -> lan_frag :: IPFragmenter(1500)
+            -> [0]lan_arpq;
 
 	lan_paint[1]
 		-> ICMPError($lan_address, redirect, host)
@@ -91,12 +103,26 @@ elementclass Router {
 
 	// Forwarding path for WAN interface
 	rt[2]	-> DropBroadcasts
-		-> wan_paint :: PaintTee(2)
-		-> wan_ipgw :: IPGWOptions($wan_address)
-		-> FixIPSrc($wan_address)
-		-> wan_ttl :: DecIPTTL
-		-> wan_frag :: IPFragmenter(1500)
-		-> [0]wan_arpq;
+            // Check for TOS
+            -> wan_qos_classifier :: IPClassifier(ip dscp = 1, -)
+            -> wan_qos_queue :: Queue
+            -> [0]wan_scheduler :: PrioSched
+        // For classifying
+        wan_qos_classifier[1]
+            -> wan_be_queue :: Queue
+            -> [1]wan_scheduler
+        // For scheduling
+        wan_scheduler
+            -> LinkUnqueue(0, 1000)
+            -> DropBroadcasts
+            -> wan_paint :: PaintTee(2)
+            -> wan_ipgw :: IPGWOptions($wan_address)
+            -> FixIPSrc($wan_address)
+            -> wan_ttl :: DecIPTTL
+            -> wan_frag :: IPFragmenter(1500)
+            -> [0]wan_arpq;
+
+
 
 	wan_paint[1]
 		-> ICMPError($wan_address, redirect, host)
