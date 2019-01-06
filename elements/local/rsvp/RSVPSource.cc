@@ -38,6 +38,10 @@ Packet *RSVPSource::make_packet(Packet *p) {
 
     click_chatter("Creating packet at source");
 
+    if (sessions.size() == 0){
+        return p;
+    }
+
     click_ip *iph = (click_ip * )(p->data());
 
     int headroom = sizeof(click_ether) + 4;
@@ -282,7 +286,7 @@ static int release(const String &conf, Element* e, void *thunk, ErrorHandler *er
                 .read_mp("SID", sid)
                 .complete() < 0)
         return -1;
-    rsvpsrc->addSession(sid, address, dst);
+    rsvpsrc->tearPath(sid);
     return 0;
 }
 

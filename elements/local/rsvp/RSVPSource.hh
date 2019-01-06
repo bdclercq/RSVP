@@ -32,8 +32,6 @@ private:
     uint32_t _generator = 0;
 //    Timer _timer;
 
-    bool hasIntegrity = false;
-    bool hasPolicy = false;
 public:
     RSVPSource();
 
