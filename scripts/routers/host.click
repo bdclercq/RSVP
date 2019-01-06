@@ -5,10 +5,24 @@
 elementclass Host {
 	$address, $gateway |
 
+        dest :: RSVPDest();
+        src :: RSVPSource();
+        tee :: Tee(2);
+
 	// Shared IP input path
-	ip :: Strip(14)
+	ip1 :: Strip(14)
 		-> CheckIPHeader
-		-> rt :: StaticIPLookup(
+        -> tee;
+
+        tee[0]
+            -> dest
+            -> rt;
+
+        tee[1]
+            -> src
+            -> rt;
+ 
+        rt :: StaticIPLookup(
 			$address:ip/32 0,
 			$address:ipnet 1,
 			0.0.0.0/0 $gateway 1)
@@ -19,6 +33,7 @@ elementclass Host {
 		-> FixIPSrc($address)
 		-> ttl :: DecIPTTL
 		-> frag :: IPFragmenter(1500)
+//HIER SCHEDULER
 		-> arpq :: ARPQuerier($address)
 		-> output;
 

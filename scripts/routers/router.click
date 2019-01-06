@@ -12,9 +12,14 @@
 elementclass Router {
 	$lan_address, $wan_address, $default_gw |
 
+        node_l :: RSVPNode($lan_address);
+        node_w :: RSVPNode($wan_address);
+
 	// Shared IP input path and routing table
 	ip :: Strip(14)
 		-> CheckIPHeader
+                -> node_l
+                -> node_w
 		-> rt :: StaticIPLookup(
 			$lan_address/32 0,
 			$wan_address/32 0,
