@@ -33,7 +33,16 @@ elementclass Host {
 		-> FixIPSrc($address)
 		-> ttl :: DecIPTTL
 		-> frag :: IPFragmenter(1500)
-//HIER SCHEDULER
+        -> qos_classifier :: IPClassifier(ip dscp = 1, -)
+        -> qos_queue :: Queue
+        -> [0]scheduler :: PrioSched
+        // For classifying
+        qos_classifier[1]
+            -> be_queue :: Queue
+            -> [1]scheduler
+        // For scheduling
+        scheduler
+            -> LinkUnqueue(0, 1000)
 		-> arpq :: ARPQuerier($address)
 		-> output;
 
