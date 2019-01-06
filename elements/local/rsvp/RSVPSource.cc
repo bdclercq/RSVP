@@ -187,7 +187,7 @@ int RSVPSource::tearPath(int sid) {
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
-    ch->msg_type = 1;
+    ch->msg_type = 5;
     ch->length = htons(8 + 12 + 12 + 12 + 36);
     ch->checksum = 0;
 
