@@ -27,7 +27,7 @@ int RSVPNode::configure(Vector <String> &conf, ErrorHandler *errh) {
 RSVPNode::~RSVPNode() {}
 
 void RSVPNode::push(int, Packet *p) {
-    click_chatter("Processing packet...");
+    //click_chatter("Processing packet...");
     click_ip* iph = (click_ip*)(p->data());
     CommonHeader* ch = (CommonHeader*)(iph+1);
     Session* session = (Session*)(ch+1);

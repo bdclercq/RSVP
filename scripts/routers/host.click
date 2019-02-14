@@ -9,24 +9,24 @@ elementclass Host {
         src :: RSVPSource();
         tee :: Tee(2);
 
+    rt :: StaticIPLookup(
+                $address:ip/32 0,
+                $address:ipnet 1,
+                0.0.0.0/0 $gateway 1)
+            -> [1]output;
+
 	// Shared IP input path
-	ip1 :: Strip(14)
+	ip :: Strip(14)
 		-> CheckIPHeader
         -> tee;
 
-        tee[0]
-            -> dest
-            -> rt;
+    tee[0]
+        -> dest
+        -> rt;
 
-        tee[1]
-            -> src
-            -> rt;
- 
-        rt :: StaticIPLookup(
-			$address:ip/32 0,
-			$address:ipnet 1,
-			0.0.0.0/0 $gateway 1)
-		-> [1]output;
+    tee[1]
+        -> src
+        -> rt;
 
 	rt[1]
 		-> ipgw :: IPGWOptions($address)
@@ -57,7 +57,9 @@ elementclass Host {
 
 	// incoming packets
 	input	-> HostEtherFilter($address)
-		-> in_cl :: Classifier(12/0806 20/0001, 12/0806 20/0002, 12/0800)
+		-> in_cl :: Classifier(12/0806 20/0001,     // ARP request
+		                        12/0806 20/0002,    // ARP reply
+		                        12/0800)            // IP
 		-> arp_res :: ARPResponder($address)
 		-> output;
 

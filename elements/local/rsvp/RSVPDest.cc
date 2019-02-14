@@ -113,11 +113,17 @@ Packet* RSVPDest::make_packet(Packet* p) {
 }
 
 void RSVPDest::push(int, Packet *p) {
-    click_chatter("Pushing packet at RSVPDest");
+    if (sendResv){
+                click_chatter("Pushing packet at RSVPDest");
 
-    Packet* q = make_packet(p);
+                Packet* q = make_packet(p);
 
-    output(0).push(q);
+                output(0).push(q);
+    }
+    else{
+        output(0).push(p);
+    }
+
 }
 
 void RSVPDest::setRSVP() {
@@ -126,22 +132,23 @@ void RSVPDest::setRSVP() {
 
 void RSVPDest::addSession(int sid, IPAddress address, uint16_t port) {
     sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
+    sendResv = true;
 }
 
-static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
-    RSVPDest* rsvpdst = (RSVPDest*)e;
-    Vector<String> vec;
-    cp_argvec(conf, vec);
-    if (Args(vec, e, errh)
-//                .read_mp("ADDR", address)
-//                .read_mp("INPORT", in_port)
-//                .read_mp("DST", dst)
-//                .read_mp("OUTPORT", out_port)
-                .complete() < 0)
-        return -1;
-    rsvpdst->setRSVP();
-    return 0;
-}
+//static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
+//    RSVPDest* rsvpdst = (RSVPDest*)e;
+//    Vector<String> vec;
+//    cp_argvec(conf, vec);
+//    if (Args(vec, e, errh)
+////                .read_mp("ADDR", address)
+////                .read_mp("INPORT", in_port)
+////                .read_mp("DST", dst)
+////                .read_mp("OUTPORT", out_port)
+//                .complete() < 0)
+//        return -1;
+//    rsvpdst->setRSVP();
+//    return 0;
+//}
 
 static int setSessionHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
     RSVPDest* rsvpdst = (RSVPDest*)e;
@@ -163,7 +170,7 @@ static int setSessionHandler(const String &conf, Element* e, void *thunk, ErrorH
 }
 
 void RSVPDest::add_handlers() {
-    add_write_handler("setRSVP", &setRSVPHandler, (void*) 0);
+    //add_write_handler("setRSVP", &setRSVPHandler, (void*) 0);
     add_write_handler("addSession", &setSessionHandler, (void*) 0);
 }
 

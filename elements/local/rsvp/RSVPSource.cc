@@ -132,31 +132,34 @@ Packet *RSVPSource::make_packet(Packet *p) {
     return q;
 }
 
-//int RSVPSource::push_packet(Element* e) {
-//    RSVPSource * rsvpSource = (RSVPSource *)e;
-//    rsvpSource->push(0, rsvpSource->make_packet());
-//    return 0;
-//}
-
 void RSVPSource::push(int, Packet *p) {
-    click_chatter("Pushing packet at RSVPSource %s", address.unparse().c_str());
 
-    Packet *q = make_packet(p);
+    if (tos){
+        click_chatter("Pushing packet at RSVPSource %s", address.unparse().c_str());
 
-    output(0).push(q);
+        Packet *q = make_packet(p);
+
+        output(0).push(q);
+    } else{
+        output(0).push(p);
+    }
 }
 
 void RSVPSource::setRSVP(IPAddress src, uint16_t port) {
     address = src;
     port = port;
+    tos = true;
 }
 
 void RSVPSource::addSession(int sid, IPAddress address, uint16_t port) {
     sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
+    tos = true;
 }
 
 int RSVPSource::tearPath(int sid) {
     // Send path tear message
+    tos = false;
+
     std::pair<IPAddress, uint16_t> entry = sessions[sid];
 
     int headroom = sizeof(click_ether) + 4;
