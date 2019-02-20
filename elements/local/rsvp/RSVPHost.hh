@@ -45,6 +45,8 @@ public:
 
     int configure(Vector <String> &, ErrorHandler *);
 
+    IPAddress getOwnAddress(){return _own_address;}
+
     void push(int, Packet *p);
 
     static int push_packet(Element *e);

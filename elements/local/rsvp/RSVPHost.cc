@@ -374,10 +374,24 @@ static int release(const String &conf, Element* e, void *thunk, ErrorHandler *er
     return 0;
 }
 
+enum{OWN_ADDR};
+
+String read_handler(Element *e, void *thunk){
+    RSVPHost* rsvphost = (RSVPHost*)e;
+    switch ((intptr_t)thunk) {
+        case OWN_ADDR:
+            return String((rsvphost->getOwnAddress()).unparse().c_str());
+        default:
+            return "<error>";
+    }
+    click_chatter((rsvphost->getOwnAddress()).unparse().c_str());
+}
+
 void RSVPHost::add_handlers() {
     add_write_handler("setRSVP", &setRSVPHandler, (void*) 0);
     add_write_handler("addSession", &setSession, (void*) 0);
-    add_write_handler("release", &setSession, (void*) 0);
+    add_write_handler("release", &release, (void*) 0);
+    add_read_handler("getOwnAddress", read_handler, OWN_ADDR);
 }
 
 CLICK_ENDDECLS
