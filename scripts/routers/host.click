@@ -5,38 +5,42 @@
 elementclass Host {
 	$address, $gateway |
 
-        host :: RSVPHost($address:ip);
+        host :: RSVPHost($address:ip); //Het is miss handig da ge aan uw element $address kunt meegeven dan weet
+                            // dan weet uw host zijn eigen ip adres
 
-    rt :: StaticIPLookup(
+        rt :: StaticIPLookup(
                 $address:ip/32 0,
                 $address:ipnet 1,
                 0.0.0.0/0 $gateway 1)
             -> [1]output;
 
 	// Shared IP input path
-	ip :: Strip(14)
-		-> CheckIPHeader
-        -> host
-        -> rt;
+	ip :: Strip(14) // ETHERNET HEADER WORDT VERWIJDERD
+		-> CheckIPHeader // kijkt wa parameters na in de ip-header
+                -> host // onze host heeft 2 inputs, 1 voor rsvp-pakketten en 1 voor de rest
+                        // dit moet je zelf weten wat handiger is voor u :)
+                -> rt;
 
 	rt[1]
-	    //-> EtherEncap(0x0800, $address:/32, $address:ipnet)
+	    //-> EtherEncap(0x0800, $address:ether, $gateway)
 		-> ipgw :: IPGWOptions($address)
 		-> FixIPSrc($address)
 		-> ttl :: DecIPTTL
 		-> frag :: IPFragmenter(1500)
-        -> qos_classifier :: IPClassifier(ip dscp = 1, -)
-        -> qos_queue :: Queue
-        -> [0]scheduler :: PrioSched
+                -> qos_classifier :: IPClassifier(ip dscp > 0, -) // > 0 is beter want 1 klopt niet
+                -> qos_queue :: Queue
+                -> [0]scheduler :: PrioSched; // PUNT KOMMA NA ELKE BLOK!!!
+
         // For classifying
         qos_classifier[1]
-            -> be_queue :: Queue
-            -> [1]scheduler
+                -> be_queue :: Queue
+                -> [1]scheduler; // PUNT KOMMA NA ELKE BLOK!!!
+
         // For scheduling
-        scheduler
-            -> LinkUnqueue(0, 1000)
-		-> arpq :: ARPQuerier($address)
-		-> output;
+        scheduler[0]
+                -> LinkUnqueue(0, 1000) // Ik heb dit anders gedaan, maar dit zou ook kunnen
+	        -> arpq :: ARPQuerier($address)
+                -> output;
 
 	ipgw[1]	-> ICMPError($address, parameterproblem)
 		-> output;

@@ -66,14 +66,14 @@ Packet *RSVPHost::make_packet(Packet *p) {
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = IP_PROTO_RSVP;
-    ip->ip_src = address;
-    ip->ip_dst = iph->ip_dst;
+    ip->ip_src = _own_address;
+    ip->ip_dst = address;
     ip->ip_tos = 1;
     ip->ip_off = 0;
-    ip->ip_ttl = 64;
+    ip->ip_ttl = 250;
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
-    q->set_dst_ip_anno(ip->ip_dst);
+    q->set_dst_ip_anno(address);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
@@ -85,7 +85,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     session->Class = 1;
     session->C_type = 1;
     session->length = htons(12);        // (64 body + 16 length + 8 class + 8 ctype) / 8
-    session->dest_addr = iph->ip_dst;
+    session->dest_addr = address;
     session->protocol_id = ip->ip_p;
     session->flags = 0;
     session->dstport = htons(0);
@@ -93,7 +93,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
     hop->C_type = 1;
-    hop->addr = address;
+    hop->addr = _own_address;
     hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
@@ -107,7 +107,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     sendertemplate->length = htons(12); // (64 body + 16 length + 8 class + 8 ctype) / 8
     sendertemplate->Class = 11;
     sendertemplate->C_type = 1;
-    sendertemplate->src = iph->ip_src;
+    sendertemplate->src = _own_address;
     sendertemplate->reserved = htons(0);
     sendertemplate->srcPort = htons(port);
 
@@ -167,14 +167,14 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = IP_PROTO_RSVP;
-    ip->ip_src = iph->ip_dst;
-    ip->ip_dst = iph->ip_src;
-    ip->ip_tos = 1;
+    ip->ip_src = _own_address;
+    ip->ip_dst = address;
+    ip->ip_tos = 184;
     ip->ip_off = 0;
-    ip->ip_ttl = 64;
+    ip->ip_ttl = 250;
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
-    q->set_dst_ip_anno(ip->ip_dst);
+    q->set_dst_ip_anno(address);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
@@ -190,7 +190,7 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
     hop->C_type = 1;
-    hop->addr = iph->ip_dst;
+    hop->addr = address;
     hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
@@ -218,23 +218,11 @@ void RSVPHost::push(int, Packet *p) {
 
     if (tos){
         Packet *q = make_packet(p);
-        click_chatter("Pushing packet at RSVPHost %s", address.unparse().c_str());
+        click_chatter("Pushing packet at RSVPHost %s to %s", _own_address.unparse().c_str(), address.unparse().c_str());
         output(0).push(q);
     } else{
         output(0).push(p);
     }
-}
-
-void RSVPHost::setRSVP(IPAddress src, uint16_t port) {
-    address = src;
-    port = port;
-    tos = true;
-}
-
-void RSVPHost::addSession(int sid, IPAddress address, uint16_t port) {
-    sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
-    setRSVP(address, port);
-    //tos = true;
 }
 
 int RSVPHost::tearPath(int sid) {
@@ -323,6 +311,18 @@ int RSVPHost::tearPath(int sid) {
 
     sessions.erase(sid);
     output(0).push(q);
+}
+
+void RSVPHost::setRSVP(IPAddress src, uint16_t port) {
+    address = src;
+    port = port;
+    tos = true;
+}
+
+void RSVPHost::addSession(int sid, IPAddress address, uint16_t port) {
+    sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
+    setRSVP(address, port);
+    //tos = true;
 }
 
 static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHandler *errh) {
