@@ -5,9 +5,7 @@
 elementclass Host {
 	$address, $gateway |
 
-        dest :: RSVPDest();
-        src :: RSVPSource();
-        tee :: Tee(2);
+        host :: RSVPHost($address:ip);
 
     rt :: StaticIPLookup(
                 $address:ip/32 0,
@@ -18,17 +16,11 @@ elementclass Host {
 	// Shared IP input path
 	ip :: Strip(14)
 		-> CheckIPHeader
-        -> tee;
-
-    tee[0]
-        -> dest
-        -> rt;
-
-    tee[1]
-        -> src
+        -> host
         -> rt;
 
 	rt[1]
+	    //-> EtherEncap(0x0800, $address:/32, $address:ipnet)
 		-> ipgw :: IPGWOptions($address)
 		-> FixIPSrc($address)
 		-> ttl :: DecIPTTL

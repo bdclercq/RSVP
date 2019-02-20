@@ -2,8 +2,8 @@
 // Created by student on 11/15/18.
 //
 
-#ifndef CLICK_RSVPSOURCE_HH
-#define CLICK_RSVPSOURCE_HH
+#ifndef CLICK_RSVPHOST_HH
+#define CLICK_RSVPHOST_HH
 
 #include <click/element.hh>
 #include <click/vector.hh>
@@ -16,10 +16,10 @@
 
 CLICK_DECLS
 
-class RSVPSource : public Element {
+class RSVPHost : public Element {
 private:
+    IPAddress _own_address;
     IPAddress address;
-    IPAddress dst;
     bool tos = false;
     uint16_t port;
     PathState pState;
@@ -33,11 +33,11 @@ private:
 //    Timer _timer;
 
 public:
-    RSVPSource();
+    RSVPHost();
 
-    ~RSVPSource();
+    ~RSVPHost();
 
-    const char *class_name() const { return "RSVPSource"; }
+    const char *class_name() const { return "RSVPHost"; }
 
     const char *port_count() const { return "0-1/1"; }
 
@@ -52,6 +52,8 @@ public:
 //    int push_packet();
     Packet *make_packet(Packet *p);
 
+    Packet *make_reservation(Packet *p);
+
     void setRSVP(IPAddress src, uint16_t port);
 
     void addSession(int, IPAddress, uint16_t);
@@ -60,7 +62,7 @@ public:
 
     void add_handlers();
 };
-//static int setRSVPHandler(const String &conf, Element *e, void *thunk, ErrorHandler *errh);
+
 CLICK_ENDDECLS
 
-#endif //CLICK_RSVPSOURCE_HH
+#endif //CLICK_RSVPHOST_HH
