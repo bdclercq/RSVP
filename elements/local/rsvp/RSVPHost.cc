@@ -36,7 +36,7 @@ RSVPHost::~RSVPHost() {}
 
 Packet *RSVPHost::make_packet(Packet *p) {
 
-    click_chatter("Creating packet at source");
+    click_chatter("Creating packet at host");
 
     if (sessions.size() == 0){
         return p;
@@ -60,20 +60,21 @@ Packet *RSVPHost::make_packet(Packet *p) {
 
     uint16_t ipid = ((_generator) % 0xFFFF) + 1;
 
-    click_ip *ip = (click_ip *) q->data();
+    click_ether *eth = (click_ether *) q->data();
+
+    click_ip *ip = (click_ip *) (eth+1);
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = IP_PROTO_RSVP;
     ip->ip_src = _own_address;
-    ip->ip_dst = address;
+    ip->ip_dst = _address;
     ip->ip_tos = 1;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
-    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
-    q->set_dst_ip_anno(address);
+    q->set_dst_ip_anno(_address);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
@@ -85,7 +86,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     session->Class = 1;
     session->C_type = 1;
     session->length = htons(12);        // (64 body + 16 length + 8 class + 8 ctype) / 8
-    session->dest_addr = address;
+    session->dest_addr = _address;
     session->protocol_id = ip->ip_p;
     session->flags = 0;
     session->dstport = htons(0);
@@ -109,7 +110,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     sendertemplate->C_type = 1;
     sendertemplate->src = _own_address;
     sendertemplate->reserved = htons(0);
-    sendertemplate->srcPort = htons(port);
+    sendertemplate->srcPort = htons(_own_port);
 
     SenderTSpec* spec = (SenderTSpec*)(sendertemplate+1);
     spec->length = htons(36);           // (256 body + 16 length + 8 class + 8 ctype) / 8
@@ -128,6 +129,8 @@ Packet *RSVPHost::make_packet(Packet *p) {
     spec->p = htonl(UINT32_MAX);
     spec->m = htonl(74);
     spec->M = htonl(74);
+
+    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
     return q;
 }
@@ -168,13 +171,12 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     ip->ip_id = htons(ipid);
     ip->ip_p = IP_PROTO_RSVP;
     ip->ip_src = _own_address;
-    ip->ip_dst = address;
+    ip->ip_dst = _address;
     ip->ip_tos = 184;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
-    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
-    q->set_dst_ip_anno(address);
+    q->set_dst_ip_anno(_address);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
@@ -190,7 +192,7 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
     hop->C_type = 1;
-    hop->addr = address;
+    hop->addr = _address;
     hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
@@ -210,6 +212,8 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     style->reserved_options = 0;
     style->available_options = 0;
 
+    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
+
     return q;
 
 }
@@ -218,7 +222,7 @@ void RSVPHost::push(int, Packet *p) {
 
     if (tos){
         Packet *q = make_packet(p);
-        click_chatter("Pushing packet at RSVPHost %s to %s", _own_address.unparse().c_str(), address.unparse().c_str());
+        click_chatter("Pushing packet at RSVPHost %s to %s", _own_address.unparse().c_str(), _address.unparse().c_str());
         output(0).push(q);
     } else{
         output(0).push(p);
@@ -252,14 +256,14 @@ int RSVPHost::tearPath(int sid) {
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = IP_PROTO_RSVP;
-    ip->ip_src = address;
+    ip->ip_src = _own_address;
     ip->ip_dst = entry.first;
     ip->ip_tos = 1;
     ip->ip_off = 0;
     ip->ip_ttl = 64;
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
-    q->set_dst_ip_anno(ip->ip_dst);
+    q->set_dst_ip_anno(_address);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
@@ -287,9 +291,9 @@ int RSVPHost::tearPath(int sid) {
     sendertemplate->length = htons(12); // (64 body + 16 length + 8 class + 8 ctype) / 8
     sendertemplate->Class = 11;
     sendertemplate->C_type = 1;
-    sendertemplate->src = address;
+    sendertemplate->src = _own_address;
     sendertemplate->reserved = htons(0);
-    sendertemplate->srcPort = htons(port);
+    sendertemplate->srcPort = htons(_own_port);
 
     SenderTSpec* spec = (SenderTSpec*)(sendertemplate+1);
     spec->length = htons(36);           // (256 body + 16 length + 8 class + 8 ctype) / 8
@@ -314,14 +318,15 @@ int RSVPHost::tearPath(int sid) {
 }
 
 void RSVPHost::setRSVP(IPAddress src, uint16_t port) {
-    address = src;
-    port = port;
+    _own_address = src;
+    _own_port = port;
     tos = true;
 }
 
 void RSVPHost::addSession(int sid, IPAddress address, uint16_t port) {
     sessions[sid] = std::pair<IPAddress, uint16_t>(address, port);
-    setRSVP(address, port);
+    _address = address;
+    _port = port;
     //tos = true;
 }
 
@@ -335,7 +340,7 @@ static int setRSVPHandler(const String &conf, Element* e, void *thunk, ErrorHand
     if (Args(vec, e, errh)
                 .read_mp("SID", sid)
                 .read_mp("ADDR", address)
-                .read_mp("PRT", port)
+                .read_mp("PORT", port)
                 .complete() < 0)
         return -1;
     rsvphost->setRSVP(address, port);
@@ -352,7 +357,7 @@ static int setSession(const String &conf, Element* e, void *thunk, ErrorHandler 
     if (Args(vec, e, errh)
                 .read_mp("SID", sid)
                 .read_mp("DST_ADDR", address)
-                .read_mp("DST_port", dst)
+                .read_mp("DST_PORT", dst)
                 .complete() < 0)
         return -1;
     rsvphost->addSession(sid, address, dst);
@@ -388,8 +393,8 @@ String read_handler(Element *e, void *thunk){
 }
 
 void RSVPHost::add_handlers() {
-    add_write_handler("setRSVP", &setRSVPHandler, (void*) 0);
-    add_write_handler("addSession", &setSession, (void*) 0);
+    add_write_handler("sender", &setRSVPHandler, (void*) 0);
+    add_write_handler("session", &setSession, (void*) 0);
     add_write_handler("release", &release, (void*) 0);
     add_read_handler("getOwnAddress", read_handler, OWN_ADDR);
 }

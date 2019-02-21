@@ -19,9 +19,10 @@ CLICK_DECLS
 class RSVPHost : public Element {
 private:
     IPAddress _own_address;
-    IPAddress address;
+    IPAddress _address;
     bool tos = false;
-    uint16_t port;
+    uint16_t _own_port;
+    uint16_t _port;
     PathState pState;
 
     // Map <address, port> pairs to session IDs
