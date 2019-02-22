@@ -60,9 +60,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
 
     uint16_t ipid = ((_generator) % 0xFFFF) + 1;
 
-    click_ether *eth = (click_ether *) q->data();
-
-    click_ip *ip = (click_ip *) (eth+1);
+    click_ip *ip = (click_ip *) q->data();
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
     ip->ip_len = htons(q->length());
@@ -70,11 +68,12 @@ Packet *RSVPHost::make_packet(Packet *p) {
     ip->ip_p = IP_PROTO_RSVP;
     ip->ip_src = _own_address;
     ip->ip_dst = _address;
-    ip->ip_tos = 1;
+    ip->ip_tos = 184;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
 
     q->set_dst_ip_anno(_address);
+    q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;

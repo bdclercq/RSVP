@@ -3,3 +3,9 @@ sudo ./userlevel/click scripts/test2.click -p 1001
 telnet localhost 1001
     readlist
     write rsvpsource.setRSVP ADDR 127.0.0.1, DST 127.0.0.2
+
+    write host1/host.session SID 1, DST_ADDR 192.168.11.1, DST_PORT 24
+    write host1/host.sender SID 1, ADDR 192.168.10.1, PORT 24
+
+        write src.session SID 1, DST_ADDR 192.168.11.1, DST_PORT 24
+        write src.sender SID 1, ADDR 192.168.10.1, PORT 24
