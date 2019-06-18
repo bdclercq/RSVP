@@ -12,6 +12,8 @@ struct PathState{
     uint16_t out_port;
     IPAddress HOP_addr;
     IPAddress HOP_LIH;
+
+    uint16_t _lifetime;
 };
 
 #endif //CLICK_PATHSTATE_HH

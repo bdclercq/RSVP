@@ -5,6 +5,8 @@
 elementclass Host {
 	$address, $gateway |
 
+	    printer :: Print("RSVP", -1, CONTENTS ASCII);
+
         host :: RSVPHost($address:ip); //Het is miss handig da ge aan uw element $address kunt meegeven dan weet
                             // dan weet uw host zijn eigen ip adres
 
@@ -19,6 +21,7 @@ elementclass Host {
 		-> CheckIPHeader // kijkt wa parameters na in de ip-header
                 -> host // onze host heeft 2 inputs, 1 voor rsvp-pakketten en 1 voor de rest
                         // dit moet je zelf weten wat handiger is voor u :)
+                -> printer
                 -> rt;
 
 	rt[1]
@@ -53,6 +56,7 @@ elementclass Host {
 
 	// incoming packets
 	input	-> HostEtherFilter($address)
+	    -> IPPrint
 		-> in_cl :: Classifier(12/0806 20/0001,     // ARP request
 		                        12/0806 20/0002,    // ARP reply
 		                        12/0800)            // IP

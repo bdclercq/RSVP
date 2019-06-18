@@ -69,11 +69,11 @@ struct Time_Value{
     uint32_t period;
 };
 
-struct Integrity{
-    uint16_t length = 4;     // Minimum length of 4
-    uint8_t Class = 4;
-    uint8_t C_type = 1;
-};
+//struct Integrity{
+//    uint16_t length = 4;     // Minimum length of 4
+//    uint8_t Class = 4;
+//    uint8_t C_type = 1;
+//};
 
 struct Scope{
     uint16_t length = 4;     // Minimum length of 4
@@ -145,20 +145,20 @@ struct SenderTSpec{
     uint16_t service_length;
     uint8_t param_id = 127;
     uint8_t param_flags = 0;
-    uint16_t param_length = 0;
-    uint32_t r;                 // Bucket rate
-    uint32_t b;                 // Bucket size
-    uint32_t p = UINT32_MAX;    // Peak rate
-    uint32_t m;                 // Minimal policed unit
-    uint32_t M;                 // Maximum packet size
+    uint16_t param_length = 5;
+    uint32_t r = 10000;                 // Bucket rate
+    uint32_t b = 1000;                 // Bucket size
+    uint32_t p = r*b;    // Peak rate
+    uint32_t m = 100;                 // Minimal policed unit
+    uint32_t M = 2^15;                 // Maximum packet size, 1500 in reference
 
 };
 
-struct PolicyData{
-    uint16_t length = 4;     // Minimum length of 4
-    uint8_t Class = 14;
-    uint8_t C_type = 1;
-};
+//struct PolicyData{
+//    uint16_t length = 4;     // Minimum length of 4
+//    uint8_t Class = 14;
+//    uint8_t C_type = 1;
+//};
 
 struct Resvconfirm{
     uint16_t length = 4;     // Minimum length of 4

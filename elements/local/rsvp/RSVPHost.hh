@@ -11,7 +11,7 @@
 #include<click/timer.hh>
 #include <map>
 #include "PathState.hh"
-#include "ResvState.h"
+#include "ResvState.hh"
 #include "RSVPObject.hh"
 
 CLICK_DECLS
@@ -21,6 +21,7 @@ private:
     IPAddress _own_address;
     IPAddress _address;
     bool tos = false;
+    bool dst_set = false;
     uint16_t _own_port;
     uint16_t _port;
     PathState pState;
@@ -31,7 +32,10 @@ private:
     std::map<SessionInfo, ResvState> rstates;
 
     uint32_t _generator = 0;
-//    Timer _timer;
+
+    Timer _timer;
+    uint16_t _lifetime;
+    uint64_t _identification;
 
 public:
     RSVPHost();
@@ -45,6 +49,8 @@ public:
     const char *processing() const { return PUSH; }
 
     int configure(Vector <String> &, ErrorHandler *);
+
+    void run_timer(Timer*);
 
     IPAddress getOwnAddress(){return _own_address;}
 

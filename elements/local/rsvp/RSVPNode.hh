@@ -6,10 +6,11 @@
 #define CLICK_RSVPNODE_HH
 
 #include <click/element.hh>
+#include<click/timer.hh>
 #include <map>
 #include "RSVPObject.hh"
 #include "PathState.hh"
-#include "ResvState.h"
+#include "ResvState.hh"
 
 CLICK_DECLS
 
@@ -20,6 +21,10 @@ private:
     uint16_t out_port;
     std::map<SessionInfo, PathState> pstates;
     std::map<SessionInfo, ResvState> rstates;
+
+    Timer _timer;
+    uint16_t _lifetime;
+    unsigned K = 3;
 
 public:
     RSVPNode();
@@ -32,6 +37,7 @@ public:
     int configure(Vector<String>&, ErrorHandler*);
 
     void push(int, Packet* p);
+    void run_timer(Timer *);
 };
 
 CLICK_ENDDECLS
