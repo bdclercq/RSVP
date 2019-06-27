@@ -89,19 +89,23 @@ struct Style{
     uint8_t C_type = 1;
 
     uint8_t flags;
-    uint16_t reserved_options;
-    uint8_t available_options;
+    uint8_t reserved_options1;
+    uint8_t reserved_options2;
+    uint8_t fixed_filter;
 };
 
 struct Flowspec{
-    uint16_t length = 4;     // Minimum length of 4
+    uint16_t length = 36;     // Minimum length of 4
     uint8_t Class = 9;
     uint8_t C_type = 2;
 
     // See RFC2210
-    uint4_t version;
+    uint8_t version;
+    uint8_t res;
     uint16_t total_length;
     uint8_t service = 5;
+    unsigned zero : 1;
+    unsigned res2 : 7;
     uint16_t service_length;
     uint8_t param_id = 127;
     uint8_t param_flags = 0;
@@ -119,6 +123,7 @@ struct Filterspec{
     uint8_t C_type = 1;
 
     uint32_t src;
+    uint16_t reserved;
     uint16_t srcPort;
 };
 
@@ -161,7 +166,7 @@ struct SenderTSpec{
 //};
 
 struct Resvconfirm{
-    uint16_t length = 4;     // Minimum length of 4
+    uint16_t length = 12;     // Minimum length of 4
     uint8_t Class = 15;
     uint8_t C_type = 1;
 

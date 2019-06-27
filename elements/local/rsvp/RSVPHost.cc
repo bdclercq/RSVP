@@ -91,8 +91,10 @@ Packet *RSVPHost::make_packet(Packet *p) {
 
     WritablePacket *q = WritablePacket::make(headroom, 0, packetsize, tailroom);
 
-    if (q == 0)
+    if (q == 0) {
+        click_chatter("Error with creating Path message: returning empty packet");
         return 0;
+    }
 
     memset(q->data(), '\0', packetsize);
 
@@ -104,19 +106,20 @@ Packet *RSVPHost::make_packet(Packet *p) {
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = 46;
-    ip->ip_src = p_ip->ip_src;
-    ip->ip_dst = p_ip->ip_dst;
+    ip->ip_src = _own_address;
+    ip->ip_dst = _address;
     ip->ip_tos = 184;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
 
-    q->set_dst_ip_anno(p_ip->ip_dst);
+    q->set_dst_ip_anno(_address);
     q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
     ch->msg_type = 1;
     ch->length = htons(8 + 12 + 12 + 8 + 12 + 36);
+    ch->send_ttl = 127;
     ch->checksum = 0;
 
     Session *session = (Session *) (ch + 1);
@@ -131,7 +134,7 @@ Packet *RSVPHost::make_packet(Packet *p) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
     hop->C_type = 1;
-    hop->addr = p_ip->ip_src;
+    hop->addr = _own_address;
     hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
@@ -204,16 +207,19 @@ Packet *RSVPHost::make_reservation(Packet *p) {
             sizeof(Session) +
             sizeof(RSVP_HOP) +
             sizeof(Time_Value) +
-            sizeof(Style);
+            sizeof(Resvconfirm) +
+            sizeof(Style)+
+            sizeof(Flowspec)+
+            sizeof(Filterspec);
 
     int tailroom = 0;
 
     WritablePacket *q = WritablePacket::make(headroom, 0, packetsize, tailroom);
 
-    if (q == 0)
+    if (q == 0) {
+        click_chatter("Error with creating Resv message: returning empty packet");
         return 0;
-
-
+    }
 
     memset(q->data(), '\0', packetsize);
 
@@ -225,30 +231,31 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     ip->ip_len = htons(q->length());
     ip->ip_id = htons(ipid);
     ip->ip_p = 46;
-    ip->ip_src = iph->ip_dst;
-    ip->ip_dst = iph->ip_src;
+    ip->ip_src = _own_address;
+    ip->ip_dst = _address;
     ip->ip_tos = 184;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
 
-    q->set_dst_ip_anno(iph->ip_src);
+    q->set_dst_ip_anno(_address);
     q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
     ch->msg_type = 2;
-    ch->length = htons(8 + 12 + 12 + 8 + 8);
+    ch->length = htons(12 + 12 + 8 + 8 + 8 + 36 + 12);
+    ch->send_ttl = 127;
     ch->checksum = 0;
 
 //    click_chatter("Add session to Resv Message");
     Session *session = (Session *) (ch + 1);
-    session = prev_session;
+    *session = *prev_session;
 
 //    click_chatter("Add HOP to Resv Message");
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
     hop->C_type = 1;
-    hop->addr = iph->ip_src;
+    hop->addr = _own_address;
     hop->LIH = 0;
     hop->length = htons(12);            // (64 body + 16 length + 8 class + 8 ctype) / 8
 
@@ -257,16 +264,49 @@ Packet *RSVPHost::make_reservation(Packet *p) {
     time_value->length = htons(8);      // (32 body + 16 length + 8 class + 8 ctype) / 8
     time_value->C_type = 1;
     time_value->Class = 5;
-    time_value->period = htons(1);
+    time_value->period = htons(1000);
+
+    Resvconfirm* resvconfirm = (Resvconfirm*)(time_value+1);
+    resvconfirm->C_type = 1;
+    resvconfirm->Class = 15;
+    resvconfirm->length = htons(8);     // (32 body + 16 length + 8 class + 8 ctype) / 8
+    resvconfirm->receiveraddr = _own_address;
 
 //    click_chatter("Add style to Resv Message");
-    Style* style = (Style*)(time_value+1);
+    Style* style = (Style*)(resvconfirm+1);
     style->length = htons(8);           // (32 body + 16 length + 8 class + 8 ctype) / 8
     style->C_type = 1;
     style->Class = 8;
     style->flags = 0;
-    style->reserved_options = 0;
-    style->available_options = 0;
+    style->reserved_options1 = 0;
+    style->reserved_options2 = 0;
+    style->fixed_filter = 10;
+
+    Flowspec* flowspec = (Flowspec*)(style+1);
+    flowspec->length = htons(36);
+    flowspec->C_type = 2;
+    flowspec->Class = 9;
+    flowspec->version = 4;
+    flowspec->res = 12;
+    flowspec->total_length = htons(7);
+    flowspec->service = 5;
+    flowspec->service_length = htons(6);
+    flowspec->param_id = 127;
+    flowspec->param_flags = 0;
+    flowspec->param_length = htons(5);
+    flowspec->r = htonl(1176256512);
+    flowspec->b = htonl(1148846080);
+    flowspec->p = htonl(1148846080);
+    flowspec->m = htonl(100);
+    flowspec->M = htonl(1500);
+
+    Filterspec* filterspec = (Filterspec*)(flowspec+1);
+    filterspec->length = htons(12);
+    filterspec->Class = 10;
+    filterspec->C_type = 1;
+    filterspec->src = _address;
+    filterspec->reserved = 0;
+    filterspec->srcPort = htons(_port);
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
 
@@ -330,7 +370,6 @@ void RSVPHost::push(int, Packet *p) {
         else if (iph->ip_p == 17){
             if (_own_address==iph->ip_src){
                 Packet *q = make_packet(p);
-                click_chatter("Pushing RSVP packet at RSVPHost %s", _own_address.unparse().c_str());
                 output(0).push(q);
             }
         }
