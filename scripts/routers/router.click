@@ -127,8 +127,6 @@ elementclass Router {
             -> wan_frag :: IPFragmenter(1500)
             -> [0]wan_arpq;
 
-
-
 	wan_paint[1]
 		-> ICMPError($wan_address, redirect, host)
 		-> rt;

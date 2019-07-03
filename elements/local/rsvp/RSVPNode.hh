@@ -6,11 +6,11 @@
 #define CLICK_RSVPNODE_HH
 
 #include <click/element.hh>
-#include<click/timer.hh>
-#include <map>
+#include <click/timer.hh>
+#include <click/hashmap.hh>
 #include "RSVPObject.hh"
-#include "PathState.hh"
-#include "ResvState.hh"
+#include "RSVPState.hh"
+
 
 CLICK_DECLS
 
@@ -19,8 +19,7 @@ private:
     IPAddress address;
     uint16_t in_port;
     uint16_t out_port;
-    std::map<SessionInfo, PathState> pstates;
-    std::map<SessionInfo, ResvState> rstates;
+    HashMap<int, RSVPState> sessions;
 
     Timer _timer;
     uint16_t _lifetime;

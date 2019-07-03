@@ -7,11 +7,10 @@
 
 #include <click/element.hh>
 #include <click/vector.hh>
-#include<click/string.hh>
-#include<click/timer.hh>
-#include <map>
-#include "PathState.hh"
-#include "ResvState.hh"
+#include <click/string.hh>
+#include <click/timer.hh>
+#include <click/hashmap.hh>
+#include "RSVPState.hh"
 #include "RSVPObject.hh"
 
 CLICK_DECLS
@@ -20,16 +19,15 @@ class RSVPHost : public Element {
 private:
     IPAddress _own_address;
     IPAddress _address;
-    bool tos = false;
-    bool dst_set = false;
+    bool confirmation = false;
     uint16_t _own_port;
     uint16_t _port;
-    PathState pState;
+//    PathState pState;
 
     // Map <address, port> pairs to session IDs
-    std::map<int, std::pair<IPAddress, uint16_t>> sessions;
-    std::map<SessionInfo, PathState> pstates;
-    std::map<SessionInfo, ResvState> rstates;
+    HashMap<int, RSVPState> sessions;
+//    std::map<SessionInfo, PathState> pstates;
+//    std::map<SessionInfo, ResvState> rstates;
 
     uint32_t _generator = 0;
 
@@ -59,13 +57,15 @@ public:
     static int push_packet(Element *e);
 
 //    int push_packet();
-    Packet *make_packet(Packet *p);
+    Packet *make_packet();
 
-    Packet *make_reservation(Packet *p);
+    void make_reservation(RSVPState);
 
-    void setRSVP(IPAddress src, uint16_t port);
+    void setRSVP(int sid, IPAddress src, uint16_t port);
 
     void addSession(int, IPAddress, uint16_t);
+
+    void addReservation(int, bool);
 
     int tearPath(int);
 

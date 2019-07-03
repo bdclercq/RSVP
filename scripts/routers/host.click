@@ -42,7 +42,7 @@ elementclass Host {
         // For scheduling
         scheduler[0]
                 -> LinkUnqueue(0, 1000) // Ik heb dit anders gedaan, maar dit zou ook kunnen
-	        -> arpq :: ARPQuerier($address)
+	            -> arpq :: ARPQuerier($address)
                 -> output;
 
 	ipgw[1]	-> ICMPError($address, parameterproblem)

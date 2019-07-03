@@ -38,19 +38,19 @@ RSVPNode::~RSVPNode() {}
 void RSVPNode::run_timer(Timer * timer) {
 
 //    click_chatter("run timer");
-    for (auto it = pstates.begin(); it != pstates.end();) {
-        PathState pstate = (*it).second;
-        uint16_t lt = ntohs(pstate._lifetime);
-        if (lt > 0) {
-            lt--;
-            pstate._lifetime = htons(lt);
-            (*it).second = pstate;
-            ++it;
-        }
-        else {
-            pstates.erase(it);
-        }
-    }
+//    for (auto it = pstates.begin(); it != pstates.end();) {
+//        PathState pstate = (*it).second;
+//        uint16_t lt = ntohs(pstate._lifetime);
+//        if (lt > 0) {
+//            lt--;
+//            pstate._lifetime = htons(lt);
+//            (*it).second = pstate;
+//            ++it;
+//        }
+//        else {
+//            pstates.erase(it);
+//        }
+//    }
 
 //    click_chatter("reschedule");
     _timer.reschedule_after_msec(1000);
@@ -71,26 +71,26 @@ void RSVPNode::push(int, Packet *p) {
         Sendertemplate* sendertemplate = (Sendertemplate*)(time_value+1);
         SenderTSpec* senderTSpec = (SenderTSpec*)(sendertemplate+1);
 
-        SessionInfo si;
-        si.dest_addr = session->dest_addr;
-        si.dstport = session->dstport;
+//        SessionInfo si;
+//        si.dest_addr = session->dest_addr;
+//        si.dstport = session->dstport;
         // If packet is a Path or Resv Message, update states
         if (ch->msg_type == 1 ){
             // Path message
             // Address in state is previous address
 
-            PathState state;
+//            PathState state;
+//
+//            state.session_dst = session->dest_addr;
+//            state.session_flags = session->flags;
+//            state.session_PID = session->protocol_id;
+//            state.out_port = session->dstport;
+//            state.HOP_addr = rsvp_hop->addr;
+//            state.HOP_LIH = rsvp_hop->LIH;
+//
+//            state._lifetime = (K+0.5)*1.5*time_value->period;
 
-            state.session_dst = session->dest_addr;
-            state.session_flags = session->flags;
-            state.session_PID = session->protocol_id;
-            state.out_port = session->dstport;
-            state.HOP_addr = rsvp_hop->addr;
-            state.HOP_LIH = rsvp_hop->LIH;
-
-            state._lifetime = (K+0.5)*1.5*time_value->period;
-
-            pstates[si] = state;
+//            pstates[si] = state;
             // Update address in HOP for next node
             rsvp_hop->LIH = rsvp_hop->addr;
             rsvp_hop->addr = address;
@@ -100,16 +100,16 @@ void RSVPNode::push(int, Packet *p) {
             // Resv message
             // Address in state is address for next hop
 
-            ResvState state;
-
-            state.session_dst = session->dest_addr;
-            state.session_flags = session->flags;
-            state.session_PID = session->protocol_id;
-            state.out_port = session->dstport;
-            state.HOP_addr = rsvp_hop->addr;
-            state.HOP_LIH = rsvp_hop->LIH;
-
-            rstates[si] = state;
+//            ResvState state;
+//
+//            state.session_dst = session->dest_addr;
+//            state.session_flags = session->flags;
+//            state.session_PID = session->protocol_id;
+//            state.out_port = session->dstport;
+//            state.HOP_addr = rsvp_hop->addr;
+//            state.HOP_LIH = rsvp_hop->LIH;
+//
+//            rstates[si] = state;
             // Update address in HOP for comparison in next node
 //        rsvp_hop->addr = pathState.HOP_addr;
             output(0).push(p);
@@ -117,7 +117,7 @@ void RSVPNode::push(int, Packet *p) {
             // If packet is path tear message
         else if(ch->msg_type == 5){
 
-            pstates.erase(si);
+//            pstates.erase(si);
             output(0).push(p);
         }
             // In all other cases: just pass the packet
