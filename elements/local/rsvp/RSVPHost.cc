@@ -29,11 +29,8 @@ int RSVPHost::configure(Vector <String> &conf, ErrorHandler *errh) {
     _timer.initialize(this);
     _timer.schedule_after_msec(1000);
 
-    click_chatter("RSVPHost initialized with ");
-    click_chatter(_own_address.unparse().c_str());
-//    click_chatter(String(in_port).c_str());
-//    click_chatter(dst.unparse().c_str());
-//    click_chatter(String(out_port).c_str());
+//    click_chatter("RSVPHost initialized with %s %u", _own_address.unparse().c_str(), _own_port);
+
     return 0;
 }
 
@@ -102,7 +99,7 @@ Packet *RSVPHost::make_packet() {
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
     ip->ip_len = htons(q->length());
-    ip->ip_id = htons(ipid);
+    ip->ip_id = 0;
     ip->ip_p = 46;
     ip->ip_src = _own_address;
     ip->ip_dst = _address;
@@ -419,25 +416,25 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
     ip->ip_len = htons(q->length());
-    ip->ip_id = htons(ipid);
+    ip->ip_id = 0;
     ip->ip_p = 46;
     ip->ip_src = _own_address;
-    ip->ip_dst = _address;
+    ip->ip_dst = rsvpState.HOP_addr;
     ip->ip_tos = _tos_value;
     ip->ip_off = 0;
     ip->ip_ttl = 250;
 
-    q->set_dst_ip_anno(_address);
+    q->set_dst_ip_anno(rsvpState.HOP_addr);
     q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
     ch->msg_type = 2;
     if (rsvpState.confRequested){
-        ch->length = htons(12 + 12 + 8 + 8 + 8 + 36 + 12);
+        ch->length = htons(12 + 12 + 8 + 8 + 8 + 8 + 36 + 12);
     }
     else{
-        ch->length = htons(12 + 12 + 8 + 8 + 36 + 12);
+        ch->length = htons(12 + 12 + 8 + 8 + 8 + 36 + 12);
     }
     ch->send_ttl = 127;
     ch->checksum = 0;
@@ -465,7 +462,7 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     time_value->length = htons(8);      // (32 body + 16 length + 8 class + 8 ctype) / 8
     time_value->C_type = 1;
     time_value->Class = 5;
-    time_value->period = htons(1000);
+    time_value->period = htonl(1000);
 
     Style* style;
 
@@ -502,7 +499,7 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     flowspec->length = htons(36);
     flowspec->C_type = 2;
     flowspec->Class = 9;
-    flowspec->version = 4;
+    flowspec->version = htons(1);
     flowspec->res = 12;
     flowspec->total_length = htons(7);
     flowspec->service = 5;
@@ -520,9 +517,9 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     filterspec->length = htons(12);
     filterspec->Class = 10;
     filterspec->C_type = 1;
-    filterspec->src = _address;
+    filterspec->src = rsvpState.src_address;
     filterspec->reserved = 0;
-    filterspec->srcPort = htons(_port);
+    filterspec->srcPort = htons(rsvpState.src_port);
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
@@ -658,19 +655,30 @@ void RSVPHost::push(int, Packet *p) {
         /// IP protocol 46: RSVP
         if (iph->ip_p == 46){
             click_chatter("RSVP packet found");
-            CommonHeader* ch = (CommonHeader*)(iph+1);
+            char *ipc = (char*)(iph);
+            ipc += (iph->ip_hl)*4;
+            CommonHeader* ch = (CommonHeader*)(ipc);
             click_chatter("Packet has message type %d", ch->msg_type);
             // Path message meant for this host: reply with Resv message and update states
-            if (ch->msg_type == 1 and _own_address==iph->ip_dst){
+            if (ch->msg_type == 1 && _own_address==iph->ip_dst){
                 click_chatter("Path message found");
-                click_chatter("Pushing Resv message at %s", _own_address.unparse().c_str());
+                click_chatter("Pushing Resv message at %s %u", _own_address.unparse().c_str(), _own_port);
                 for (auto it = sessions.begin(); it!= sessions.end(); it++){
-                    if (it.value().session_dst == _own_address && it.value().dst_port == _own_port){
+                    click_chatter("Entry: %s %u", it.value().session_dst.unparse().c_str(), it.value().dst_port);
+                    if (it.value().session_dst == _own_address){
+                        Session *s = (Session*)(ch+1);
+                        RSVP_HOP* hop = (RSVP_HOP*)(s+1);
+                        Time_Value* t = (Time_Value*)(hop+1);
+                        Sendertemplate* stemp = (Sendertemplate*)(t+1);
+                        it.value().HOP_addr = hop->addr;
+                        it.value().src_address = stemp->src;
+                        it.value().src_port = htons(stemp->srcPort);
+                        click_chatter("HOP address: %s", hop->addr.unparse().c_str());
                         make_reservation(it.value());
                     }
                 }
             }
-            if (ch->msg_type == 2 and _own_address==iph->ip_dst){
+            if (ch->msg_type == 2 && _own_address==iph->ip_dst){
                 click_chatter("Resv message found");
                 for (auto it = sessions.begin(); it != sessions.end(); it++){
                     if (it.value().src_address == _own_address && it.value().src_port == _own_port){

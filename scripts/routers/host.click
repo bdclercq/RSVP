@@ -25,7 +25,6 @@ elementclass Host {
                 -> rt;
 
 	rt[1]
-	    //-> EtherEncap(0x0800, $address:ether, $gateway)
 		-> ipgw :: IPGWOptions($address)
 		-> FixIPSrc($address)
 		-> ttl :: DecIPTTL
