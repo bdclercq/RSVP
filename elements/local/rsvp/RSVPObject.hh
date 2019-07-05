@@ -174,5 +174,16 @@ struct Resvconfirm{
     uint32_t receiveraddr;
 };
 
+struct ErrorSpec{
+    uint16_t length = 12;
+    uint8_t Class = 6;
+    uint8_t C_type = 1;
+
+    uint32_t address;
+    uint8_t flags;
+    uint8_t error_code;
+    uint16_t error_value;
+};
+
 CLICK_ENDDECLS
 #endif //CLICK_RSVPOBJECT_HH

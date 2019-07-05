@@ -35,6 +35,8 @@ private:
     uint16_t _lifetime;
     uint64_t _identification;
 
+    int _tos_value = 184;
+
 public:
     RSVPHost();
 
@@ -59,7 +61,13 @@ public:
 //    int push_packet();
     Packet *make_packet();
 
+    Packet *make_path_tear(HashMap<int, RSVPState>::Pair*);
+
+    Packet *make_resv_tear(HashMap<int, RSVPState>::Pair*);
+
     void make_reservation(RSVPState);
+
+    void send_confirmation(RSVPState);
 
     void setRSVP(int sid, IPAddress src, uint16_t port);
 
@@ -67,7 +75,7 @@ public:
 
     void addReservation(int, bool);
 
-    int tearPath(int);
+    void tearPath(int);
 
     void add_handlers();
 };

@@ -5,9 +5,9 @@
 elementclass Host {
 	$address, $gateway |
 
-	    printer :: Print("RSVP", -1, CONTENTS ASCII);
+	    //printer :: Print("RSVP", -1, CONTENTS ASCII);
 
-        host :: RSVPHost($address:ip); //Het is miss handig da ge aan uw element $address kunt meegeven dan weet
+        rsvpHost :: RSVPHost($address:ip); //Het is miss handig da ge aan uw element $address kunt meegeven dan weet
                             // dan weet uw host zijn eigen ip adres
 
         rt :: StaticIPLookup(
@@ -19,9 +19,9 @@ elementclass Host {
 	// Shared IP input path
 	ip :: Strip(14) // ETHERNET HEADER WORDT VERWIJDERD
 		-> CheckIPHeader // kijkt wa parameters na in de ip-header
-                -> host // onze host heeft 2 inputs, 1 voor rsvp-pakketten en 1 voor de rest
-                        // dit moet je zelf weten wat handiger is voor u :)
-                -> printer
+                -> rsvpHost // onze host heeft 2 inputs, 1 voor rsvp-pakketten en 1 voor de rest
+                            // dit moet je zelf weten wat handiger is voor u :)
+                //-> printer
                 -> rt;
 
 	rt[1]
