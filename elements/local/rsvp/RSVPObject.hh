@@ -185,5 +185,12 @@ struct ErrorSpec{
     uint16_t error_value;
 };
 
+struct RouterOption{
+    uint16_t value;
+    uint8_t type;
+    uint8_t length;
+
+};
+
 CLICK_ENDDECLS
 #endif //CLICK_RSVPOBJECT_HH

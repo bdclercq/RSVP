@@ -55,7 +55,7 @@ elementclass Host {
 
 	// incoming packets
 	input	-> HostEtherFilter($address)
-	    -> IPPrint
+	    //-> IPPrint
 		-> in_cl :: Classifier(12/0806 20/0001,     // ARP request
 		                        12/0806 20/0002,    // ARP reply
 		                        12/0800)            // IP

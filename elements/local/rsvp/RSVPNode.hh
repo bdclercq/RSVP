@@ -7,6 +7,7 @@
 
 #include <click/element.hh>
 #include <click/timer.hh>
+#include <click/string.hh>
 #include <click/hashmap.hh>
 #include "RSVPObject.hh"
 #include "RSVPState.hh"
@@ -16,7 +17,9 @@ CLICK_DECLS
 
 class RSVPNode: public Element{
 private:
-    IPAddress address;
+    IPAddress lan_address;
+    IPAddress wan_address;
+    int lan_wan; // 0 for lan, 1 for wan
     uint16_t in_port;
     uint16_t out_port;
     HashMap<int, RSVPState> sessions;
@@ -24,6 +27,7 @@ private:
     Timer _timer;
     uint16_t _lifetime;
     unsigned K = 3;
+    int _tos_value = 184;
 
 public:
     RSVPNode();
@@ -35,8 +39,13 @@ public:
 
     int configure(Vector<String>&, ErrorHandler*);
 
+    /// Push along packets and react in a correct way.
     void push(int, Packet* p);
+
+    /// Run timer to check if states are still valid.
     void run_timer(Timer *);
+
+    Packet* make_packet(Packet* p);
 };
 
 CLICK_ENDDECLS

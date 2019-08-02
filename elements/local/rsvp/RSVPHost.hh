@@ -22,14 +22,9 @@ private:
     bool confirmation = false;
     uint16_t _own_port;
     uint16_t _port;
-//    PathState pState;
 
     // Map <address, port> pairs to session IDs
     HashMap<int, RSVPState> sessions;
-//    std::map<SessionInfo, PathState> pstates;
-//    std::map<SessionInfo, ResvState> rstates;
-
-    uint32_t _generator = 0;
 
     Timer _timer;
     uint16_t _lifetime;
