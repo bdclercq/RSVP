@@ -23,14 +23,35 @@ elementclass Router {
                 $wan_address:ipnet 2,
                 0.0.0.0/0 $default_gw 2);
 
+    rsvp_LAN :: IPClassifier(rsvp, -);
+    rsvp_WAN :: IPClassifier(rsvp, -);
+
 	ip_LAN :: Strip(14)
     		-> CheckIPHeader
-            -> node_l -> EtherEncap(0x0800, 2:2:2:2:2:2, 1:1:1:1:1:1) -> ToDump("node_l.pcap") -> Strip(14)
+    		-> rsvp_LAN;
+
+    rsvp_LAN[0]
+            -> [0]node_l;
+
+    rsvp_LAN[1]
+            -> [1]node_l;
+
+    node_l
+            -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("node_l.pcap") -> Strip(14)
             -> rt;
 
     ip_WAN :: Strip(14)
     		-> CheckIPHeader
-            -> node_w -> EtherEncap(0x0800, 2:2:2:2:2:2, 1:1:1:1:1:1) -> ToDump("node_w.pcap") -> Strip(14)
+    		-> rsvp_WAN;
+
+    rsvp_WAN[0]
+            -> [0]node_w;
+
+    rsvp_WAN[1]
+            -> [1]node_w;
+
+    node_w
+            -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("node_w.pcap") -> Strip(14)
             -> rt;
 
 	// ARP responses are copied to each ARPQuerier.
@@ -43,9 +64,11 @@ elementclass Router {
 		-> HostEtherFilter($lan_address)
 		-> lan_class :: Classifier(12/0806 20/0001, 12/0806 20/0002, 12/0800)
 		-> lan_arpr :: ARPResponder($lan_address)
+		-> ToDump("lanR_out.pcap")
 		-> [0]output;
 
 	lan_arpq :: ARPQuerier($lan_address)
+        -> ToDump("lanQ_out.pcap")
 		-> [0]output;
 
 	lan_class[1]
@@ -63,9 +86,11 @@ elementclass Router {
 		-> HostEtherFilter($wan_address)
 		-> wan_class :: Classifier(12/0806 20/0001, 12/0806 20/0002, 12/0800)
 		-> wan_arpr :: ARPResponder($wan_address)
+		-> ToDump("wanR_out.pcap")
 		-> [1]output;
 
 	wan_arpq :: ARPQuerier($wan_address)
+	    -> ToDump("wanQ_out.pcap")
 		-> [1]output;
 
 	wan_class[1]
@@ -76,32 +101,42 @@ elementclass Router {
 		-> Paint(2)
 		-> ip_WAN;
 
+///////////////////////////////
+
 	// Local delivery
 	rt[0]	-> Discard;
 
 ///////////////////////////////
 
 	// Forwarding path for LAN interface
+
+	lan_qos_classifier :: IPClassifier(ip dscp > 0, -);
+	lan_qos_queue :: Queue;
+	lan_be_queue :: Queue;
+	lan_scheduler :: PrioSched;
+
 	rt[1]
-	-> EtherEncap(0x0800, 2:2:2:2:2:2, 1:1:1:1:1:1) -> ToDump("rt_l.pcap") -> Strip(14)
+	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt_l.pcap") -> Strip(14)
 	-> DropBroadcasts
-	        // Check for TOS
-            -> lan_qos_classifier :: IPClassifier(ip dscp = 1, -)
-            -> lan_qos_queue :: Queue
-            -> [0]lan_scheduler :: PrioSched;
-        // For classifying
-        lan_qos_classifier[1]
-            -> lan_be_queue :: Queue
-            -> [1]lan_scheduler;
-        // For scheduling
-        lan_scheduler
-            -> LinkUnqueue(0, 1000)
-            -> DropBroadcasts
-            -> lan_paint :: PaintTee(1)
+	        -> lan_paint :: PaintTee(1)
             -> lan_ipgw :: IPGWOptions($lan_address)
             -> FixIPSrc($lan_address)
             -> lan_ttl :: DecIPTTL
             -> lan_frag :: IPFragmenter(1500)
+	        // Check for TOS
+            -> lan_qos_classifier
+            -> lan_qos_queue
+            -> [0]lan_scheduler;
+
+    // For classifying
+    lan_qos_classifier[1]
+            -> lan_be_queue
+            -> [1]lan_scheduler;
+
+    // For scheduling
+    lan_scheduler
+            -> LinkUnqueue(0, 1000)
+            //-> DropBroadcasts
             -> [0]lan_arpq;
 
 	lan_paint[1]
@@ -124,26 +159,28 @@ elementclass Router {
 
 	// Forwarding path for WAN interface
 	rt[2]
-	-> EtherEncap(0x0800, 2:2:2:2:2:2, 1:1:1:1:1:1) -> ToDump("rt_w.pcap") -> Strip(14)
+	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt_w.pcap") -> Strip(14)
 	-> DropBroadcasts
-            // Check for TOS
-            -> wan_qos_classifier :: IPClassifier(ip dscp = 1, -)
-            -> wan_qos_queue :: Queue
-            -> [0]wan_scheduler :: PrioSched;
-        // For classifying
-        wan_qos_classifier[1]
-            -> wan_be_queue :: Queue
-            -> [1]wan_scheduler;
-        // For scheduling
-        wan_scheduler
-            -> LinkUnqueue(0, 1000)
-            -> DropBroadcasts
-            -> wan_paint :: PaintTee(2)
+	        -> wan_paint :: PaintTee(2)
             -> wan_ipgw :: IPGWOptions($wan_address)
             -> FixIPSrc($wan_address)
             -> wan_ttl :: DecIPTTL
             -> wan_frag :: IPFragmenter(1500)
-            -> [0]wan_arpq;
+            // Check for TOS
+            -> wan_qos_classifier :: IPClassifier(ip dscp > 0, -)
+            -> wan_qos_queue :: Queue
+            -> [0]wan_scheduler :: PrioSched;
+
+    // For classifying
+    wan_qos_classifier[1]
+        -> wan_be_queue :: Queue
+        -> [1]wan_scheduler;
+
+    // For scheduling
+    wan_scheduler
+        -> LinkUnqueue(0, 1000)
+        //-> DropBroadcasts
+        -> [0]wan_arpq;
 
 	wan_paint[1]
 		-> ICMPError($wan_address, redirect, host)

@@ -73,8 +73,6 @@ void RSVPHost::run_timer(Timer *) {
 // Path message
 Packet *RSVPHost::make_packet() {
 
-    click_chatter("Creating packet at host %s", _own_address.unparse().c_str());
-
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
             sizeof(RouterOption) +
@@ -115,9 +113,9 @@ Packet *RSVPHost::make_packet() {
     q->set_ip_header(ip, ip->ip_hl);
 
     RouterOption* RO = (RouterOption*)(ip+1);
-    RO->type = htons(148);
-    RO->length = htons(4);
-    RO->value = 0;
+    RO->type = IPOPT_RA;
+    RO->length = 4;
+    RO->value = htons(0);
 
     CommonHeader *ch = (CommonHeader *) (RO + 1);
     ch->version_flags = 16;

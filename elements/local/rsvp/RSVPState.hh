@@ -11,12 +11,15 @@ struct RSVPState{
     bool confRequested;
     bool sessionReady;
     bool reserveActive;
+    bool gotResv;
 
     IPAddress src_address;
     uint16_t src_port;
 
     IPAddress session_dst;
     uint16_t dst_port;
+
+    IPAddress conf_address = 0;
 
     uint8_t session_flags = 0;
     uint8_t session_style = 10;
@@ -31,6 +34,13 @@ struct RSVPState{
 
     Timestamp refreshValue;
     Timestamp latestRefresh;
+
+    uint32_t r = 10000;                 // Bucket rate
+    uint32_t b = 1000;                 // Bucket size
+    uint32_t p = r*b;    // Peak rate
+    uint32_t m = 100;                 // Minimal policed unit
+    uint32_t M = 2^15;                 // Maximum packet size, 1500 in reference
+
 };
 
 #endif //RSVP_RSVPSTATE_HH
