@@ -28,6 +28,7 @@ private:
 
     Timer _timer;
     uint16_t _lifetime;
+    uint16_t _counter;
     uint64_t _identification;
 
     int _tos_value = 184;

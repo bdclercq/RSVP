@@ -14,7 +14,7 @@
 
 CLICK_DECLS
 
-RSVPHost::RSVPHost() : _timer(this), _lifetime(1000) {}
+RSVPHost::RSVPHost() : _timer(this), _lifetime(10000), _counter(0) {}
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -31,7 +31,7 @@ int RSVPHost::configure(Vector <String> &conf, ErrorHandler *errh) {
     _timer.initialize(this);
     _timer.schedule_after_msec(1000);
 
-//    click_chatter("RSVPHost initialized with %s %u", _own_address.unparse().c_str(), _own_port);
+    click_chatter("RSVPHost initialized with %s %u", _own_address.unparse().c_str(), _own_port);
 
     return 0;
 }
@@ -43,13 +43,16 @@ RSVPHost::~RSVPHost() {}
 /////////////////////////////////////////////////////////////////////////
 
 void RSVPHost::run_timer(Timer *) {
-    click_chatter("run timer");
+//    click_chatter("run timer");
 
     for (HashMap<int, RSVPState>::iterator it = sessions.begin(); it != sessions.end(); it++){
         if ((it.value().src_address == _own_address && it.value().src_port == _own_port)){
-            click_chatter("Creating and pushing Path message at %s", _own_address.unparse().c_str());
-            Packet* q = make_packet();
-            output(0).push(q);
+            if (_counter >= it.value().refreshPeriod) {
+                click_chatter("Creating and pushing Path message at %s", _own_address.unparse().c_str());
+                Packet *q = make_packet();
+                _counter = 0;
+                output(0).push(q);
+            }
         }
         if (it.value().lifetime > 0) {
             click_chatter("Decreasing lifetime %u for session %i at host %s", it.value().lifetime, it.key(), _own_address.unparse().c_str());
@@ -63,9 +66,10 @@ void RSVPHost::run_timer(Timer *) {
         }
     }
 
-    click_chatter("reschedule");
+//    click_chatter("reschedule");
+    _counter += 1000;
     _timer.reschedule_after_msec(1000);
-    click_chatter("done");
+//    click_chatter("done");
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -211,7 +215,7 @@ Packet *RSVPHost::make_path_tear(HashMap<int, RSVPState>::Pair* entry) {
     ip->ip_p = 46;
     ip->ip_src = _own_address;
     ip->ip_dst = entry->value.session_dst;
-    click_chatter("Path tear IP dst: %s", entry->value.session_dst.unparse().c_str());
+//    click_chatter("Path tear IP dst: %s", entry->value.session_dst.unparse().c_str());
     ip->ip_tos = _tos_value;
     ip->ip_off = 0;
     ip->ip_ttl = 64;
@@ -676,7 +680,7 @@ void RSVPHost::push(int, Packet *p) {
 //            click_chatter("Packet has message type %d", ch->msg_type);
             // Path message meant for this host: reply with Resv message and update states
             if (ch->msg_type == 1 && _own_address==iph->ip_dst){
-                click_chatter("Path message found");
+                click_chatter("Path message found at %s", _own_address.unparse().c_str());
 //                click_chatter("Pushing Resv message at %s %u", _own_address.unparse().c_str(), _own_port);
                 for (auto it = sessions.begin(); it!= sessions.end(); it++){
 //                    click_chatter("Entry: %s %u", it.value().session_dst.unparse().c_str(), it.value().dst_port);
@@ -694,12 +698,13 @@ void RSVPHost::push(int, Packet *p) {
                 }
             }
             if (ch->msg_type == 2 && _own_address==iph->ip_dst){
-                click_chatter("Resv message found");
+                click_chatter("Resv message found at %s %u", _own_address.unparse().c_str(), _own_port);
                 for (auto it = sessions.begin(); it != sessions.end(); it++){
                     if (it.value().src_address == _own_address && it.value().src_port == _own_port){
                         Session *s = (Session*)(ch+1);
                         RSVP_HOP* hop = (RSVP_HOP*)(s+1);
                         it.value().dst_HOP_addr = hop->addr;
+                        it.value().reserveActive = true;
                         if (it.value().confRequested)
                             send_confirmation(it.value());
                     }
@@ -727,7 +732,7 @@ void RSVPHost::push(int, Packet *p) {
             }
             // Pass the packet to the next hop and update states
             else{
-                click_chatter("Host received path message meant for other host");
+                click_chatter("Received message with type %d for host %s", ch->msg_type, iph->ip_dst);
                 output(0).push(p);
             }
 
@@ -738,11 +743,15 @@ void RSVPHost::push(int, Packet *p) {
             IPAddress src = iph->ip_src;
             IPAddress dst = iph->ip_dst;
             for (auto it = sessions.begin(); it != sessions.end(); it++){
+//                click_chatter("%s ?= %s, %s ?= %s",src.unparse().c_str(), it.value().src_address.unparse().c_str(),
+//                        dst.unparse().c_str(), it.value().session_dst.unparse().c_str());
                 if (src == it.value().src_address && dst == it.value().session_dst && it.value().reserveActive){
                     const click_udp *udph = p->udp_header();
                     uint16_t src_port = ntohs(udph->uh_sport);
                     uint16_t dst_port = ntohs(udph->uh_dport);
                     if (src_port == it.value().src_port && dst_port == it.value().dst_port){
+//                        click_chatter("Setting tos");
+                        iph->ip_sum = 0;
                         iph->ip_tos = _tos_value;
                         iph->ip_sum = click_in_cksum((unsigned char *) iph, sizeof(click_ip));
                     }

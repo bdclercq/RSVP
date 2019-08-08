@@ -36,7 +36,8 @@ elementclass Host {
 
         // For scheduling
         scheduler[0]
-            -> LinkUnqueue(0, 1000) // Ik heb dit anders gedaan, maar dit zou ook kunnen
+            -> BandwidthShaper(RATE 1000 kbps)
+            -> Unqueue()
             -> arpq :: ARPQuerier($address)
             -> output;
 

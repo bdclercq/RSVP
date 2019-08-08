@@ -12,8 +12,7 @@
 elementclass Router {
 	$lan_address, $wan_address, $default_gw |
 
-        node_l :: RSVPNode($lan_address, $wan_address, 0);
-        node_w :: RSVPNode($lan_address, $wan_address, 1);
+        node :: RSVPNode($lan_address, $wan_address);
 
 	// Shared IP input path and routing table
     rt :: StaticIPLookup(
@@ -31,27 +30,23 @@ elementclass Router {
     		-> rsvp_LAN;
 
     rsvp_LAN[0]
-            -> [0]node_l;
+            -> [0]node;
 
     rsvp_LAN[1]
-            -> [1]node_l;
-
-    node_l
-            -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("node_l.pcap") -> Strip(14)
-            -> rt;
+            -> [2]node;
 
     ip_WAN :: Strip(14)
     		-> CheckIPHeader
     		-> rsvp_WAN;
 
     rsvp_WAN[0]
-            -> [0]node_w;
+            -> [1]node;
 
     rsvp_WAN[1]
-            -> [1]node_w;
+            -> [2]node;
 
-    node_w
-            -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("node_w.pcap") -> Strip(14)
+    node
+            -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("node.pcap") -> Strip(14)
             -> rt;
 
 	// ARP responses are copied to each ARPQuerier.
@@ -135,8 +130,8 @@ elementclass Router {
 
     // For scheduling
     lan_scheduler
-            -> LinkUnqueue(0, 1000)
-            //-> DropBroadcasts
+            -> BandwidthShaper(RATE 1000 kbps)
+            -> Unqueue()
             -> [0]lan_arpq;
 
 	lan_paint[1]
@@ -178,8 +173,8 @@ elementclass Router {
 
     // For scheduling
     wan_scheduler
-        -> LinkUnqueue(0, 1000)
-        //-> DropBroadcasts
+        -> BandwidthShaper(RATE 1000 kbps)
+        -> Unqueue()
         -> [0]wan_arpq;
 
 	wan_paint[1]

@@ -14,7 +14,7 @@
 
 CLICK_DECLS
 
-RSVPNode::RSVPNode() : _timer(this), _lifetime(1000) {}
+RSVPNode::RSVPNode() : _timer(this), _lifetime(10000) {}
 
 /////////////////////////////////////////////////////////////////////////
 
@@ -22,14 +22,12 @@ int RSVPNode::configure(Vector <String> &conf, ErrorHandler *errh) {
     if (Args(conf, this, errh)
                 .read_mp("LAN_ADDR", lan_address)
                 .read_mp("WAN_ADDR", wan_address)
-                .read_mp("LAN_WAN", lan_wan)
 //                .read_mp("OUTPORT", out_port)
                 .complete() < 0)
         return -1;
 
-    click_chatter("lan_wan = %i", lan_wan);
-    click_chatter("Router initialized with LAN %s", lan_address.unparse().c_str());
-    click_chatter("Router initialized with WAN %s", wan_address.unparse().c_str());
+    click_chatter("Router initialized with LAN %s and WAN %s", lan_address.unparse().c_str(),
+                  wan_address.unparse().c_str());
 
 
     _timer.initialize(this);
@@ -66,7 +64,7 @@ void RSVPNode::run_timer(Timer *timer) {
 /////////////////////////////////////////////////////////////////////////
 
 // Path message
-Packet *RSVPNode::make_packet(Packet* p) {
+Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
 
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
@@ -74,7 +72,7 @@ Packet *RSVPNode::make_packet(Packet* p) {
                      sizeof(CommonHeader) +
                      sizeof(Session) +
                      sizeof(RSVP_HOP) +
-                     sizeof(Time_Value)+
+                     sizeof(Time_Value) +
                      sizeof(Sendertemplate) +
                      sizeof(SenderTSpec);
 
@@ -89,7 +87,7 @@ Packet *RSVPNode::make_packet(Packet* p) {
 
     memset(q->data(), '\0', packetsize);
 
-    click_ip* iph = (click_ip*)(p->data());
+    click_ip *iph = (click_ip * )(p->data());
     click_ip *ip = (click_ip *) q->data();
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) + sizeof(RouterOption) >> 2;
@@ -106,45 +104,45 @@ Packet *RSVPNode::make_packet(Packet* p) {
     q->set_ip_header(ip, ip->ip_hl);
     q->set_dst_ip_anno(iph->ip_dst);
 
-    RouterOption* oldRO = (RouterOption*)(iph+1);
-    RouterOption* RO = (RouterOption*)(ip+1);
+    RouterOption *oldRO = (RouterOption *) (iph + 1);
+    RouterOption *RO = (RouterOption *) (ip + 1);
     *RO = *oldRO;
 
-    CommonHeader* oldch = (CommonHeader *) (oldRO + 1);
+    CommonHeader *oldch = (CommonHeader *) (oldRO + 1);
     CommonHeader *ch = (CommonHeader *) (RO + 1);
     *ch = *oldch;
     ch->checksum = 0;
 
-    Session* oldsession = (Session*)(oldch+1);
+    Session *oldsession = (Session *) (oldch + 1);
     Session *session = (Session *) (ch + 1);
     *session = *oldsession;
 
     RSVP_HOP *oldhop = (RSVP_HOP *) (oldsession + 1);
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
-    if (lan_wan == 0) {
-        click_chatter("lan_wan == 0");
+    if (isLan) {
+        click_chatter("Going from LAN to WAN");
         hop->addr = wan_address;
     }
         // If wan, send to lan
-    else if (lan_wan == 1) {
-        click_chatter("lan_wan == 1");
+    else {
+        click_chatter("Going from WAN to LAN");
         hop->addr = lan_address;
     }
 
-    Time_Value* oldtime_value = (Time_Value*)(oldhop+1);
-    Time_Value* time_value = (Time_Value*)(hop+1);
+    Time_Value *oldtime_value = (Time_Value *) (oldhop + 1);
+    Time_Value *time_value = (Time_Value *) (hop + 1);
     *time_value = *oldtime_value;
 
-    Sendertemplate* oldsendertemplate = (Sendertemplate*)(oldtime_value+1);
-    Sendertemplate* sendertemplate = (Sendertemplate*)(time_value+1);
+    Sendertemplate *oldsendertemplate = (Sendertemplate *) (oldtime_value + 1);
+    Sendertemplate *sendertemplate = (Sendertemplate *) (time_value + 1);
     *sendertemplate = *oldsendertemplate;
 
-    SenderTSpec* oldspec = (SenderTSpec*)(oldsendertemplate+1);
-    SenderTSpec* spec = (SenderTSpec*)(sendertemplate+1);
+    SenderTSpec *oldspec = (SenderTSpec *) (oldsendertemplate + 1);
+    SenderTSpec *spec = (SenderTSpec *) (sendertemplate + 1);
     *spec = *oldspec;
 
-    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip)+ sizeof(RouterOption));
+    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
     return q;
@@ -153,7 +151,7 @@ Packet *RSVPNode::make_packet(Packet* p) {
 /////////////////////////////////////////////////////////////////////////
 
 // Resv message
-Packet* RSVPNode::make_reservation(Packet* p, bool conf) {
+Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan) {
 
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
@@ -161,11 +159,11 @@ Packet* RSVPNode::make_reservation(Packet* p, bool conf) {
                      sizeof(Session) +
                      sizeof(RSVP_HOP) +
                      sizeof(Time_Value) +
-                     sizeof(Style)+
-                     sizeof(Flowspec)+
+                     sizeof(Style) +
+                     sizeof(Flowspec) +
                      sizeof(Filterspec);
 
-    if (conf){
+    if (conf) {
         packetsize += sizeof(Resvconfirm);
     }
 
@@ -180,7 +178,7 @@ Packet* RSVPNode::make_reservation(Packet* p, bool conf) {
 
     memset(q->data(), '\0', packetsize);
 
-    click_ip* iph = (click_ip*)(p->data());
+    click_ip *iph = (click_ip * )(p->data());
     click_ip *ip = (click_ip *) q->data();
     ip->ip_v = 4;
     ip->ip_hl = sizeof(click_ip) >> 2;
@@ -197,58 +195,57 @@ Packet* RSVPNode::make_reservation(Packet* p, bool conf) {
     q->set_ip_header(ip, ip->ip_hl);
     q->set_dst_ip_anno(iph->ip_dst);
 
-    CommonHeader* oldch = (CommonHeader *) (iph + 1);
+    CommonHeader *oldch = (CommonHeader *) (iph + 1);
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     *ch = *oldch;
     ch->checksum = 0;
 
-    Session* oldsession = (Session*)(oldch+1);
+    Session *oldsession = (Session *) (oldch + 1);
     Session *session = (Session *) (ch + 1);
     *session = *oldsession;
 
     RSVP_HOP *oldhop = (RSVP_HOP *) (oldsession + 1);
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
-    if (lan_wan == 0) {
-    click_chatter("lan_wan == 0");
-    hop->addr = wan_address;
+    if (isLan) {
+        click_chatter("Going from LAN to WAN");
+        hop->addr = wan_address;
     }
-    // If wan, send to lan
-    else if (lan_wan == 1) {
-    click_chatter("lan_wan == 1");
-    hop->addr = lan_address;
+        // If wan, send to lan
+    else {
+        click_chatter("Going from WAN to LAN");
+        hop->addr = lan_address;
     }
 
-    Time_Value* oldtime_value = (Time_Value*)(oldhop+1);
-    Time_Value* time_value = (Time_Value*)(hop+1);
+    Time_Value *oldtime_value = (Time_Value *) (oldhop + 1);
+    Time_Value *time_value = (Time_Value *) (hop + 1);
     *time_value = *oldtime_value;
 
-    Style* style;
-    Style* oldstyle;
+    Style *style;
+    Style *oldstyle;
 
-    if (conf){
-        Resvconfirm* oldresvconfirm = (Resvconfirm*)(oldtime_value+1);
-        Resvconfirm* resvconfirm = (Resvconfirm*)(time_value+1);
+    if (conf) {
+        Resvconfirm *oldresvconfirm = (Resvconfirm *) (oldtime_value + 1);
+        Resvconfirm *resvconfirm = (Resvconfirm *) (time_value + 1);
         *resvconfirm = *oldresvconfirm;
 
         //    click_chatter("Add style to Resv Message");
-        oldstyle = (Style*)(oldresvconfirm+1);
-        style = (Style*)(resvconfirm+1);
+        oldstyle = (Style *) (oldresvconfirm + 1);
+        style = (Style *) (resvconfirm + 1);
         *style = *oldstyle;
-    }
-    else{
+    } else {
         //    click_chatter("Add style to Resv Message");
-        oldstyle = (Style*)(oldtime_value+1);
-        style = (Style*)(time_value+1);
+        oldstyle = (Style *) (oldtime_value + 1);
+        style = (Style *) (time_value + 1);
         *style = *oldstyle;
     }
 
-    Flowspec* oldflowspec = (Flowspec*)(oldstyle+1);
-    Flowspec* flowspec = (Flowspec*)(style+1);
+    Flowspec *oldflowspec = (Flowspec *) (oldstyle + 1);
+    Flowspec *flowspec = (Flowspec *) (style + 1);
     *flowspec = *oldflowspec;
 
-    Filterspec* oldfilterspec = (Filterspec*)(oldflowspec+1);
-    Filterspec* filterspec = (Filterspec*)(flowspec+1);
+    Filterspec *oldfilterspec = (Filterspec *) (oldflowspec + 1);
+    Filterspec *filterspec = (Filterspec *) (flowspec + 1);
     *filterspec = *oldfilterspec;
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
@@ -265,12 +262,12 @@ Packet* RSVPNode::make_reservation(Packet* p, bool conf) {
 void RSVPNode::push(int input, Packet *p) {
 
     /// IP protocol 46: RSVP
-    if (input==0) {
-        click_chatter("RSVP packet found");
+    if (input == 0) {
+        /// LAN packets
         click_ip *iph = (click_ip * )(p->data());
-        char* ipc = (char*)(iph);
-        ipc += (iph->ip_hl)*4;
-        CommonHeader* ch = (CommonHeader*)(ipc);
+        char *ipc = (char *) (iph);
+        ipc += (iph->ip_hl) * 4;
+        CommonHeader *ch = (CommonHeader *) (ipc);
         // Path message meant for this host: reply with Resv message and update states
         if (ch->msg_type == 1) {
             RouterOption *ro = (RouterOption *) (iph + 1);
@@ -278,14 +275,18 @@ void RSVPNode::push(int input, Packet *p) {
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
             Time_Value *t = (Time_Value *) (hop + 1);
-            click_chatter("Path message found");
+            click_chatter("Path message found on input 0...");
+            click_chatter("%i sessions registered...", sessions.size());
             /// Get source and destination IP from IP header and save as session source and destination
             bool found = false;
             Sendertemplate *sendertemplate = (Sendertemplate *) (t + 1);
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
-                if (it.value().session_dst == iph->ip_dst and it.value().src_address == sendertemplate->src and
-                    it.value().src_port == sendertemplate->srcPort and it.value().dst_port == s->dstport and
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == sendertemplate->src and
+                    it.value().src_port == sendertemplate->srcPort and
+                    it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id) {
+
                     found = true;
                     it.value().HOP_addr = hop->addr;
                     it.value().latestRefresh = Timestamp::recent();
@@ -301,60 +302,51 @@ void RSVPNode::push(int input, Packet *p) {
                     rsvpState.HOP_addr = hop->addr;
                 else if (ch->msg_type == 2)
                     rsvpState.dst_HOP_addr = hop->addr;
-                rsvpState.session_dst = iph->ip_dst;
+                rsvpState.session_dst = s->dest_addr;
                 rsvpState.src_address = sendertemplate->src;
                 rsvpState.src_port = sendertemplate->srcPort;
                 rsvpState.dst_port = s->dstport;
                 rsvpState.session_PID = s->protocol_id;
                 rsvpState.refreshValue = Timestamp::recent();
-                rsvpState.lifetime = 10000;
+                rsvpState.lifetime = (K + 0.5) + 1.5 * t->period;
                 rsvpState.refreshPeriod = t->period;
                 rsvpState.sessionReady = true;
                 rsvpState.conf_address = 0;
                 rsvpState.gotResv = false;
+                click_chatter("Add state");
                 sessions.insert(sid++, rsvpState);
             }
-            output(0).push(make_packet(p));
-        }
-        else if (ch->msg_type == 2) {
+            click_chatter("Forward message...");
+            output(0).push(make_packet(p, true));
+        } else if (ch->msg_type == 2) {
             ch = (CommonHeader *) (iph + 1);
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
             Time_Value *t = (Time_Value *) (hop + 1);
-
-            click_chatter("Resv message found");
+            click_chatter("Resv message found on input 0...");
+            click_chatter("%i sessions registered...", sessions.size());
             /// Get source and destination IP from IP header and save as session source and destination
-            bool found = false;
-            int size_no_conf = sizeof(click_ip) +
-                             sizeof(CommonHeader) +
-                             sizeof(Session) +
-                             sizeof(RSVP_HOP) +
-                             sizeof(Time_Value) +
-                             sizeof(Style)+
-                             sizeof(Flowspec)+
-                             sizeof(Filterspec);
-            int size_conf = size_no_conf + sizeof(Resvconfirm);
             bool conf = false;
-            Style* style;
-            Resvconfirm* resvconfirm;
-            if (iph->ip_len == size_conf){
-                resvconfirm = (Resvconfirm*)(t+1);
-                style = (Style*)(resvconfirm+1);
+            Style *style;
+            Resvconfirm *resvconfirm;
+            if (ntohs(ch->length) == 104) {
+                resvconfirm = (Resvconfirm *) (t + 1);
+                style = (Style *) (resvconfirm + 1);
+                conf = true;
             }
-            if (iph->ip_len == size_no_conf){
-                style = (Style*)(t+1);
+            else {
+                style = (Style *) (t + 1);
             }
-            Flowspec* flowspec = (Flowspec*)(style+1);
-            Filterspec* filterspec = (Filterspec*)(flowspec+1);
+            Flowspec *flowspec = (Flowspec *) (style + 1);
+            Filterspec *filterspec = (Filterspec *) (flowspec + 1);
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
-                if (it.value().session_dst == iph->ip_dst and
-                    it.value().src_address == filterspec->src and
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == IPAddress(filterspec->src) and
                     it.value().src_port == filterspec->srcPort and
                     it.value().dst_port == s->dstport and
-                    it.value().session_PID == s->protocol_id and not it.value().gotResv) {
-
-                    if (iph->ip_len == size_conf){
-                        conf = true;
+                    it.value().session_PID == s->protocol_id){
+                    click_chatter("Resv message belongs to a session...");
+                    if (ntohs(ch->length) == 104) {
                         it.value().conf_address = resvconfirm->receiveraddr;
                     }
                     /// Found the session to which the Resv message belongs
@@ -369,59 +361,171 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().gotResv = true;
                 }
             }
-            output(0).push(make_reservation(p, conf));
-        }
-        else if (ch->msg_type == 3) {
+            click_chatter("Forward message...");
+            output(0).push(make_reservation(p, conf, true));
+        } else if (ch->msg_type == 3) {
             click_chatter("Received Path error message");
             // Update hop address
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
-        }
-        else if (ch->msg_type == 4) {
+        } else if (ch->msg_type == 4) {
             click_chatter("Received Resv error message");
             // Update hop address
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
-        }
-        else if (ch->msg_type == 5) {
+        } else if (ch->msg_type == 5) {
             click_chatter("Received Path tear message");
             /// Remove path and dependent reservation state
             // Remove session and update hop
             output(0).push(p);
-        }
-        else if (ch->msg_type == 6) {
+        } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
             /// Remove reservation state
             // Update hop
             output(0).push(p);
-        }
-        else if (ch->msg_type == 7) {
+        } else if (ch->msg_type == 7) {
             click_chatter("Received Confirm  message");
             // Update hop
             output(0).push(p);
-        }
-        else {
+        } else {
             click_chatter("Message with unknown message type received:%d", ch->msg_type);
             output(0).push(p);
         }
 
     }
+    else if (input == 1){
+        /// WAN packets
+        click_ip *iph = (click_ip * )(p->data());
+        char *ipc = (char *) (iph);
+        ipc += (iph->ip_hl) * 4;
+        CommonHeader *ch = (CommonHeader *) (ipc);
+        // Path message meant for this host: reply with Resv message and update states
+        if (ch->msg_type == 1) {
+            RouterOption *ro = (RouterOption *) (iph + 1);
+            ch = (CommonHeader *) (ro + 1);
+            Session *s = (Session *) (ch + 1);
+            RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            Time_Value *t = (Time_Value *) (hop + 1);
+            click_chatter("Path message found on input 1...");
+            click_chatter("%i sessions registered...", sessions.size());
+            /// Get source and destination IP from IP header and save as session source and destination
+            bool found = false;
+            Sendertemplate *sendertemplate = (Sendertemplate *) (t + 1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == sendertemplate->src and
+                    it.value().src_port == sendertemplate->srcPort and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id) {
+
+                    found = true;
+                    it.value().HOP_addr = hop->addr;
+                    it.value().latestRefresh = Timestamp::recent();
+                    it.value().lifetime = (K + 0.5) + 1.5 * t->period;
+                    it.value().refreshPeriod = t->period;
+                    it.value().sessionReady = true;
+                }
+            }
+            if (!found) {
+                static int sid = 0;
+                RSVPState rsvpState;
+                if (ch->msg_type == 1)
+                    rsvpState.HOP_addr = hop->addr;
+                else if (ch->msg_type == 2)
+                    rsvpState.dst_HOP_addr = hop->addr;
+                rsvpState.session_dst = s->dest_addr;
+                rsvpState.src_address = sendertemplate->src;
+                rsvpState.src_port = sendertemplate->srcPort;
+                rsvpState.dst_port = s->dstport;
+                rsvpState.session_PID = s->protocol_id;
+                rsvpState.refreshValue = Timestamp::recent();
+                rsvpState.lifetime = (K + 0.5) + 1.5 * t->period;
+                rsvpState.refreshPeriod = t->period;
+                rsvpState.sessionReady = true;
+                rsvpState.conf_address = 0;
+                rsvpState.gotResv = false;
+                click_chatter("Add state");
+                sessions.insert(sid++, rsvpState);
+            }
+            click_chatter("Forward message...");
+            output(0).push(make_packet(p, false));
+        } else if (ch->msg_type == 2) {
+            ch = (CommonHeader *) (iph + 1);
+            Session *s = (Session *) (ch + 1);
+            RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            Time_Value *t = (Time_Value *) (hop + 1);
+            click_chatter("Resv message found on input 1...");
+            click_chatter("%i sessions registered...", sessions.size());
+            /// Get source and destination IP from IP header and save as session source and destination
+            bool conf = false;
+            Style *style;
+            Resvconfirm *resvconfirm;
+            if (ntohs(ch->length) == 104) {
+                resvconfirm = (Resvconfirm *) (t + 1);
+                style = (Style *) (resvconfirm + 1);
+                conf = true;
+            }
+            else {
+                style = (Style *) (t + 1);
+            }
+            Flowspec *flowspec = (Flowspec *) (style + 1);
+            Filterspec *filterspec = (Filterspec *) (flowspec + 1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == IPAddress(filterspec->src) and
+                    it.value().src_port == filterspec->srcPort and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id ){
+                    //and not it.value().gotResv) {
+                    click_chatter("Resv message belongs to a session...");
+                    if (ntohs(ch->length) == 104) {
+                        it.value().conf_address = resvconfirm->receiveraddr;
+                    }
+                    /// Found the session to which the Resv message belongs
+                    it.value().dst_HOP_addr = hop->addr;
+                    it.value().session_flags = style->flags;
+                    it.value().session_style = style->fixed_filter;
+                    it.value().r = flowspec->r;
+                    it.value().b = flowspec->b;
+                    it.value().p = flowspec->p;
+                    it.value().m = flowspec->m;
+                    it.value().M = flowspec->M;
+                    it.value().gotResv = true;
+                }
+            }
+            click_chatter("Forward message...");
+            output(0).push(make_reservation(p, conf, false));
+        } else if (ch->msg_type == 3) {
+            click_chatter("Received Path error message");
+            // Update hop address
+            /// RFC p25: error messages are simply sent upstream [...] and do not change state
+            output(0).push(p);
+        } else if (ch->msg_type == 4) {
+            click_chatter("Received Resv error message");
+            // Update hop address
+            /// RFC p25: error messages are simply sent upstream [...] and do not change state
+            output(0).push(p);
+        } else if (ch->msg_type == 5) {
+            click_chatter("Received Path tear message");
+            /// Remove path and dependent reservation state
+            // Remove session and update hop
+            output(0).push(p);
+        } else if (ch->msg_type == 6) {
+            click_chatter("Received Resv tear message");
+            /// Remove reservation state
+            // Update hop
+            output(0).push(p);
+        } else if (ch->msg_type == 7) {
+            click_chatter("Received Confirm  message");
+            // Update hop
+            output(0).push(p);
+        } else {
+            click_chatter("Message with unknown message type received:%d", ch->msg_type);
+            output(0).push(p);
+        }
+    }
         /// IP protocol 17: UDP
-    else if (input==1) {
-//        click_ip *iph = (click_ip * )(p->data());
-//        IPAddress src = iph->ip_src;
-//        IPAddress dst = iph->ip_dst;
-//        for (auto it = sessions.begin(); it != sessions.end(); it++) {
-//            if (src == it.value().src_address && dst == it.value().session_dst && it.value().reserveActive) {
-//                const click_udp *udph = p->udp_header();
-//                uint16_t src_port = ntohs(udph->uh_sport);
-//                uint16_t dst_port = ntohs(udph->uh_dport);
-//                if (src_port == it.value().src_port && dst_port == it.value().dst_port) {
-//                    iph->ip_tos = _tos_value;
-//                    iph->ip_sum = click_in_cksum((unsigned char *) iph, sizeof(click_ip));
-//                }
-//            }
-//        }
+    else if (input == 2) {
         output(0).push(p);
     }
 

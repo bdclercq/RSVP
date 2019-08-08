@@ -19,7 +19,6 @@ class RSVPNode: public Element{
 private:
     IPAddress lan_address;
     IPAddress wan_address;
-    int lan_wan; // 0 for lan, 1 for wan
     uint16_t in_port;
     uint16_t out_port;
     HashMap<int, RSVPState> sessions;
@@ -34,7 +33,7 @@ public:
     ~RSVPNode();
 
     const char *class_name() const { return "RSVPNode"; }
-    const char *port_count() const { return "2/1"; }
+    const char *port_count() const { return "3/1"; }
     const char *processing() const { return PUSH; }
 
     int configure(Vector<String>&, ErrorHandler*);
@@ -45,8 +44,8 @@ public:
     /// Run timer to check if states are still valid.
     void run_timer(Timer *);
 
-    Packet* make_packet(Packet* p);
-    Packet* make_reservation(Packet* p, bool conf);
+    Packet* make_packet(Packet* p, bool isLan);
+    Packet* make_reservation(Packet* p, bool conf, bool isLan);
 };
 
 CLICK_ENDDECLS
