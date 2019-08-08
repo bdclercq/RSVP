@@ -102,7 +102,7 @@ Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
     ip->ip_sum = 0;
 
     q->set_ip_header(ip, ip->ip_hl);
-    q->set_dst_ip_anno(iph->ip_dst);
+    q->set_dst_ip_anno(ip->ip_dst);
 
     RouterOption *oldRO = (RouterOption *) (iph + 1);
     RouterOption *RO = (RouterOption *) (ip + 1);
