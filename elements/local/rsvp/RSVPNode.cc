@@ -151,7 +151,7 @@ Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
 /////////////////////////////////////////////////////////////////////////
 
 // Resv message
-Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan) {
+Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress next_hop) {
 
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
@@ -185,15 +185,25 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan) {
     ip->ip_len = htons(q->length());
     ip->ip_id = iph->ip_id;
     ip->ip_p = iph->ip_p;
-    ip->ip_src = iph->ip_src;
-    ip->ip_dst = iph->ip_dst;
+
+    if (isLan) {
+        ip->ip_src = wan_address;
+    }
+        // If wan, send to lan
+    else {
+        ip->ip_src = lan_address;
+    }
+    click_chatter("source: from %s to %s", IPAddress(iph->ip_src).unparse().c_str(), IPAddress(ip->ip_src).unparse().c_str());
+    ip->ip_dst = next_hop;
+    click_chatter("destination is %s", next_hop.unparse().c_str());
+
     ip->ip_tos = iph->ip_tos;
     ip->ip_off = iph->ip_off;
     ip->ip_ttl = iph->ip_ttl;
     ip->ip_sum = 0;
 
     q->set_ip_header(ip, ip->ip_hl);
-    q->set_dst_ip_anno(iph->ip_dst);
+    q->set_dst_ip_anno(ip->ip_dst);
 
     CommonHeader *oldch = (CommonHeader *) (iph + 1);
     CommonHeader *ch = (CommonHeader *) (ip + 1);
@@ -208,12 +218,12 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
     if (isLan) {
-        click_chatter("Going from LAN to WAN");
+        click_chatter("Setting HOP to %s", wan_address.unparse().c_str());
         hop->addr = wan_address;
     }
         // If wan, send to lan
     else {
-        click_chatter("Going from WAN to LAN");
+        click_chatter("Setting HOP to %s", lan_address.unparse().c_str());
         hop->addr = lan_address;
     }
 
@@ -247,9 +257,6 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan) {
     Filterspec *oldfilterspec = (Filterspec *) (oldflowspec + 1);
     Filterspec *filterspec = (Filterspec *) (flowspec + 1);
     *filterspec = *oldfilterspec;
-
-    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
-    ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
@@ -359,10 +366,12 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().m = flowspec->m;
                     it.value().M = flowspec->M;
                     it.value().gotResv = true;
+
+                    click_chatter("Forward message...");
+                    output(0).push(make_reservation(p, conf, true, it.value().HOP_addr));
                 }
             }
-            click_chatter("Forward message...");
-            output(0).push(make_reservation(p, conf, true));
+
         } else if (ch->msg_type == 3) {
             click_chatter("Received Path error message");
             // Update hop address
@@ -491,10 +500,11 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().m = flowspec->m;
                     it.value().M = flowspec->M;
                     it.value().gotResv = true;
+
+                    click_chatter("Forward message...");
+                    output(0).push(make_reservation(p, conf, false, it.value().HOP_addr));
                 }
             }
-            click_chatter("Forward message...");
-            output(0).push(make_reservation(p, conf, false));
         } else if (ch->msg_type == 3) {
             click_chatter("Received Path error message");
             // Update hop address

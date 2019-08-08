@@ -99,7 +99,7 @@ elementclass Router {
 ///////////////////////////////
 
 	// Local delivery
-	rt[0]	-> Discard;
+	rt[0]	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt[0].pcap") -> Strip(14) -> Discard;
 
 ///////////////////////////////
 
@@ -111,7 +111,7 @@ elementclass Router {
 	lan_scheduler :: PrioSched;
 
 	rt[1]
-	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt_l.pcap") -> Strip(14)
+	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt[1].pcap") -> Strip(14)
 	-> DropBroadcasts
 	        -> lan_paint :: PaintTee(1)
             -> lan_ipgw :: IPGWOptions($lan_address)
@@ -154,7 +154,7 @@ elementclass Router {
 
 	// Forwarding path for WAN interface
 	rt[2]
-	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt_w.pcap") -> Strip(14)
+	-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("rt[2].pcap") -> Strip(14)
 	-> DropBroadcasts
 	        -> wan_paint :: PaintTee(2)
             -> wan_ipgw :: IPGWOptions($wan_address)
