@@ -66,6 +66,7 @@ void RSVPNode::run_timer(Timer *timer) {
 // Path message
 Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
 
+    click_chatter("Updating path message");
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
                      sizeof(RouterOption) +
@@ -145,6 +146,7 @@ Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
+    click_chatter("----------------------------------------------");
     return q;
 }
 
@@ -153,6 +155,7 @@ Packet *RSVPNode::make_packet(Packet *p, bool isLan) {
 // Resv message
 Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress next_hop) {
 
+    click_chatter("Updating Resv message");
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
                      sizeof(CommonHeader) +
@@ -218,12 +221,12 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress n
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
     if (isLan) {
-        click_chatter("Setting HOP to %s", wan_address.unparse().c_str());
+        click_chatter("Going from %s to %s", hop->addr.unparse().c_str(), wan_address.unparse().c_str());
         hop->addr = wan_address;
     }
         // If wan, send to lan
     else {
-        click_chatter("Setting HOP to %s", lan_address.unparse().c_str());
+        click_chatter("Going from %s to %s", hop->addr.unparse().c_str(), lan_address.unparse().c_str());
         hop->addr = lan_address;
     }
 
@@ -261,6 +264,7 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress n
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
+    click_chatter("----------------------------------------------");
     return q;
 
 }
@@ -270,6 +274,7 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress n
 // Path tear message
 Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
 
+    click_chatter("Updating path tear");
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip)
                      + sizeof(RouterOption)
@@ -327,12 +332,12 @@ Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
     if (isLan) {
-        click_chatter("Going from LAN to WAN");
+        click_chatter("Going from %s to %s", hop->addr.unparse().c_str(), wan_address.unparse().c_str());
         hop->addr = wan_address;
     }
         // If wan, send to lan
     else {
-        click_chatter("Going from WAN to LAN");
+        click_chatter("Going from %s to %s", hop->addr.unparse().c_str(), lan_address.unparse().c_str());
         hop->addr = lan_address;
     }
 
@@ -345,6 +350,7 @@ Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
+    click_chatter("----------------------------------------------");
     return q;
 
 }
@@ -354,6 +360,7 @@ Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
 // Confirm message
 Packet *RSVPNode::make_confirm(Packet* p, bool isLan, IPAddress next_hop) {
 
+    click_chatter("Updating confirm");
     int headroom = sizeof(click_ether) + 4;
     int packetsize = sizeof(click_ip) +
                      sizeof(RouterOption) +
@@ -392,8 +399,9 @@ Packet *RSVPNode::make_confirm(Packet* p, bool isLan, IPAddress next_hop) {
     else {
         ip->ip_src = lan_address;
     }
-    click_chatter("IP source for confirm: %s", IPAddress(ip->ip_src).unparse().c_str());
+    click_chatter("source: from %s to %s", IPAddress(oldip->ip_src).unparse().c_str(), IPAddress(ip->ip_src).unparse().c_str());
     ip->ip_dst = next_hop;
+    click_chatter("destination: from %s to %s", IPAddress(oldip->ip_dst).unparse().c_str(), IPAddress(ip->ip_dst).unparse().c_str());
     ip->ip_tos = oldip->ip_tos;
     ip->ip_off = oldip->ip_off;
     ip->ip_ttl = oldip->ip_ttl;
@@ -438,6 +446,7 @@ Packet *RSVPNode::make_confirm(Packet* p, bool isLan, IPAddress next_hop) {
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
+    click_chatter("----------------------------------------------");
     return q;
 
 }
@@ -498,10 +507,11 @@ void RSVPNode::push(int input, Packet *p) {
                 rsvpState.sessionReady = true;
                 rsvpState.conf_address = 0;
                 rsvpState.gotResv = false;
-                click_chatter("Add state");
+                click_chatter("[ [ [ Add state ] ] ]");
                 sessions.insert(sid++, rsvpState);
             }
             click_chatter("Forward message...");
+            click_chatter("----------------------------------------------");
             output(0).push(make_packet(p, true));
         } else if (ch->msg_type == 2) {
             ch = (CommonHeader *) (iph + 1);
@@ -530,7 +540,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().src_port == filterspec->srcPort and
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id){
-                    click_chatter("Resv message belongs to a session...");
+                    click_chatter("[ [ [ Session found ] ] ]");
                     if (ntohs(ch->length) == 104) {
                         it.value().conf_address = resvconfirm->receiveraddr;
                     }
@@ -547,6 +557,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().gotResv = true;
 
                     click_chatter("Forward message...");
+                    click_chatter("----------------------------------------------");
                     output(0).push(make_reservation(p, conf, true, it.value().HOP_addr));
                 }
             }
@@ -561,7 +572,9 @@ void RSVPNode::push(int input, Packet *p) {
             // Update hop address
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
-        } else if (ch->msg_type == 5) {
+        }
+
+        else if (ch->msg_type == 5) {
             click_chatter("Received Path tear message on input 0");
             /// Remove path and dependent reservation state
             // Remove session and update hop
@@ -581,11 +594,16 @@ void RSVPNode::push(int input, Packet *p) {
                     /// Found the session to which the PathTear message belongs
                     sessions.remove(it.key());
                     click_chatter("[ [ [ Removed session ] ] ]");
+                    click_chatter("Forward message...");
+                    click_chatter("----------------------------------------------");
                     output(0).push(make_path_tear(p, true));
                 }
             }
-            /// Only pass along
-            output(0).push(p);
+            /// Discard
+            click_chatter("No matching state: discard path tear (RFC p41).");
+            p->kill();
+            click_chatter("----------------------------------------------");
+//            output(0).push(p);
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
             /// Remove reservation state
@@ -608,6 +626,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id){
                     click_chatter("Forward message...");
+                    click_chatter("----------------------------------------------");
                     output(0).push(make_confirm(p, true, it.value().dst_HOP_addr));
                 }
             }
@@ -668,10 +687,11 @@ void RSVPNode::push(int input, Packet *p) {
                 rsvpState.sessionReady = true;
                 rsvpState.conf_address = 0;
                 rsvpState.gotResv = false;
-                click_chatter("Add state");
+                click_chatter("[ [ [ Add state ] ] ]");
                 sessions.insert(sid++, rsvpState);
             }
             click_chatter("Forward message...");
+            click_chatter("----------------------------------------------");
             output(0).push(make_packet(p, false));
         } else if (ch->msg_type == 2) {
             ch = (CommonHeader *) (iph + 1);
@@ -701,7 +721,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id ){
                     //and not it.value().gotResv) {
-                    click_chatter("Resv message belongs to a session...");
+                    click_chatter("[ [ [ Session found ] ] ]");
                     if (ntohs(ch->length) == 104) {
                         it.value().conf_address = resvconfirm->receiveraddr;
                     }
@@ -718,6 +738,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().gotResv = true;
 
                     click_chatter("Forward message...");
+                    click_chatter("----------------------------------------------");
                     output(0).push(make_reservation(p, conf, false, it.value().HOP_addr));
                 }
             }
@@ -731,7 +752,9 @@ void RSVPNode::push(int input, Packet *p) {
             // Update hop address
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
-        } else if (ch->msg_type == 5) {
+        }
+
+        else if (ch->msg_type == 5) {
             click_chatter("Received Path tear message on input 1");
             /// Remove path and dependent reservation state
             RouterOption *ro = (RouterOption *) (iph + 1);
@@ -750,11 +773,16 @@ void RSVPNode::push(int input, Packet *p) {
                     /// Found the session to which the PathTear message belongs
                     sessions.remove(it.key());
                     click_chatter("[ [ [ Removed session ] ] ]");
+                    click_chatter("Forwarding message ...");
+                    click_chatter("----------------------------------------------");
                     output(0).push(make_path_tear(p, false));
                 }
             }
-            /// Only pass along
-            output(0).push(p);
+            /// Discard
+            click_chatter("No matching state: discard path tear (RFC p41).");
+            p->kill();
+            click_chatter("----------------------------------------------");
+//            output(0).push(p);
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
             /// Remove reservation state
@@ -777,7 +805,8 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id){
                     click_chatter("Forward message...");
-                    output(0).push(make_confirm(p, false, it.value().HOP_addr));
+                    click_chatter("----------------------------------------------");
+                    output(0).push(make_confirm(p, false, it.value().dst_HOP_addr));
                 }
             }
         } else {
