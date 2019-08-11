@@ -718,11 +718,11 @@ void RSVPHost::push(int, Packet *p) {
             }
             if(ch->msg_type == 5){
                 click_chatter("Received Path tear message");
-//                for (HashMap<int, RSVPState>::iterator it = sessions.begin(); it != sessions.end(); it++){
-//                    if (it.value().)
-//                    click_chatter("Erasing state %i for %s", it.key(), it.value().session_dst.unparse().c_str());
-//                    sessions.remove(it.key());
-//                }
+                for (HashMap<int, RSVPState>::iterator it = sessions.begin(); it != sessions.end(); it++){
+                    if (it.value().)
+                    click_chatter("Erasing state %i for %s", it.key(), it.value().session_dst.unparse().c_str());
+                    sessions.remove(it.key());
+                }
             }
             if(ch->msg_type == 6){
                 click_chatter("Received Resv tear message");

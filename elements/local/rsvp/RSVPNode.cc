@@ -253,6 +253,7 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress n
         *style = *oldstyle;
     }
 
+    /// Merging flowspecs (RFC p 21): always forward the "largest" flowspec
     Flowspec *oldflowspec = (Flowspec *) (oldstyle + 1);
     Flowspec *flowspec = (Flowspec *) (style + 1);
     *flowspec = *oldflowspec;
