@@ -47,6 +47,7 @@ public:
     Packet* make_packet(Packet* p, bool isLan);
     Packet* make_path_tear(Packet* p, bool isLan);
     Packet* make_reservation(Packet* p, bool conf, bool isLan, IPAddress next_hop);
+    Packet* make_confirm(Packet* p, bool isLan, IPAddress next_hop);
 };
 
 CLICK_ENDDECLS

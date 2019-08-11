@@ -319,6 +319,7 @@ Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
 
     CommonHeader *ch = (CommonHeader *) (RO + 1);
     *ch = *oldch;
+    ch->checksum = 0;
 
     Session *session = (Session *) (ch + 1);
     *session = *oldsession;
@@ -340,6 +341,99 @@ Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
 
     SenderTSpec* spec = (SenderTSpec*)(sendertemplate+1);
     *spec = *oldspec;
+
+    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
+    ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
+
+    return q;
+
+}
+
+/////////////////////////////////////////////////////////////////////////
+
+// Confirm message
+Packet *RSVPNode::make_confirm(Packet* p, bool isLan, IPAddress next_hop) {
+
+    int headroom = sizeof(click_ether) + 4;
+    int packetsize = sizeof(click_ip) +
+                     sizeof(RouterOption) +
+                     sizeof(CommonHeader) +
+                     sizeof(Session) +
+                     sizeof(ErrorSpec) +
+                     sizeof(Resvconfirm)+
+                     sizeof(Style) +
+                     sizeof(Flowspec) +
+                     sizeof(Filterspec);
+
+
+    int tailroom = 0;
+
+    WritablePacket *q = WritablePacket::make(headroom, 0, packetsize, tailroom);
+
+    if (q == 0){
+        click_chatter("Confirm message problem");
+        return 0;
+    }
+
+    memset(q->data(), '\0', packetsize);
+
+    click_ip* oldip = (click_ip*)(p->data());
+
+    click_ip *ip = (click_ip *) q->data();
+    ip->ip_v = 4;
+    ip->ip_hl = sizeof(click_ip) + sizeof(RouterOption) >> 2;
+    ip->ip_len = htons(q->length());
+    ip->ip_id =oldip->ip_id;
+    ip->ip_p = oldip->ip_p;
+    if (isLan) {
+        ip->ip_src = wan_address;
+    }
+        // If wan, send to lan
+    else {
+        ip->ip_src = lan_address;
+    }
+    click_chatter("IP source for confirm: %s", IPAddress(ip->ip_src).unparse().c_str());
+    ip->ip_dst = next_hop;
+    ip->ip_tos = oldip->ip_tos;
+    ip->ip_off = oldip->ip_off;
+    ip->ip_ttl = oldip->ip_ttl;
+    ip->ip_sum = 0;
+
+    q->set_ip_header(ip, ip->ip_hl);
+    q->set_dst_ip_anno(ip->ip_dst);
+
+    RouterOption* oldRO = (RouterOption*)(oldip+1);
+    RouterOption* RO = (RouterOption*)(ip+1);
+    *RO = *oldRO;
+
+    CommonHeader *oldch = (CommonHeader *) (oldRO + 1);
+    CommonHeader *ch = (CommonHeader *) (RO + 1);
+    *ch = *oldch;
+    ch->checksum = 0;
+
+    Session *oldsession = (Session *) (oldch + 1);
+    Session *session = (Session *) (ch + 1);
+    *session = *oldsession;
+
+    ErrorSpec* olderror = (ErrorSpec*)(oldsession+1);
+    ErrorSpec* error = (ErrorSpec*)(session+1);
+    *error = *olderror;
+
+    Resvconfirm* oldresvconfirm = (Resvconfirm*)(olderror+1);
+    Resvconfirm* resvconfirm = (Resvconfirm*)(error+1);
+    *resvconfirm = *oldresvconfirm;
+
+    Style* oldstyle = (Style*)(oldresvconfirm+1);
+    Style* style = (Style*)(resvconfirm+1);
+    *style = *oldstyle;
+
+    Flowspec* oldflow = (Flowspec*)(oldstyle+1);
+    Flowspec* flow = (Flowspec*)(style+1);
+    *flow = *oldflow;
+
+    Filterspec* oldfilter = (Filterspec*)(oldflow+1);
+    Filterspec* filter = (Filterspec*)(flow+1);
+    *filter = *oldfilter;
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
@@ -475,8 +569,11 @@ void RSVPNode::push(int input, Packet *p) {
             ch = (CommonHeader *) (ro + 1);
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            Sendertemplate *sendertemplate = (Sendertemplate *) (hop + 1);
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
-                if (it.value().session_dst == s->dest_addr and
+                if (it.value().src_address == sendertemplate->src and
+                    it.value().src_port == sendertemplate->srcPort and
+                    it.value().session_dst == s->dest_addr and
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id and
                     it.value().session_flags == s->flags and
@@ -495,9 +592,25 @@ void RSVPNode::push(int input, Packet *p) {
             // Update hop
             output(0).push(p);
         } else if (ch->msg_type == 7) {
-            click_chatter("Received Confirm  message");
-            // Update hop
-            output(0).push(p);
+            click_chatter("Received Confirm  message on input 0");
+            RouterOption *ro = (RouterOption *) (iph + 1);
+            ch = (CommonHeader *) (ro + 1);
+            Session *s = (Session *) (ch + 1);
+            ErrorSpec* errorSpec = (ErrorSpec*)(s+1);
+            Resvconfirm* resvconfirm = (Resvconfirm*)(errorSpec+1);
+            Style* style = (Style*)(resvconfirm+1);
+            Flowspec* flowspec = (Flowspec*)(style+1);
+            Filterspec* filterspec = (Filterspec*)(flowspec+1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == IPAddress(filterspec->src) and
+                    it.value().src_port == filterspec->srcPort and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id){
+                    click_chatter("Forward message...");
+                    output(0).push(make_confirm(p, true, it.value().dst_HOP_addr));
+                }
+            }
         } else {
             click_chatter("Message with unknown message type received:%d", ch->msg_type);
             output(0).push(p);
@@ -625,8 +738,11 @@ void RSVPNode::push(int input, Packet *p) {
             ch = (CommonHeader *) (ro + 1);
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            Sendertemplate *sendertemplate = (Sendertemplate *) (hop + 1);
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
-                if (it.value().session_dst == s->dest_addr and
+                if (it.value().src_address == sendertemplate->src and
+                    it.value().src_port == sendertemplate->srcPort and
+                    it.value().session_dst == s->dest_addr and
                     it.value().dst_port == s->dstport and
                     it.value().session_PID == s->protocol_id and
                     it.value().session_flags == s->flags and
@@ -645,9 +761,25 @@ void RSVPNode::push(int input, Packet *p) {
             // Update hop
             output(0).push(p);
         } else if (ch->msg_type == 7) {
-            click_chatter("Received Confirm  message");
-            // Update hop
-            output(0).push(p);
+            click_chatter("Received Confirm  message on input 1");
+            RouterOption *ro = (RouterOption *) (iph + 1);
+            ch = (CommonHeader *) (ro + 1);
+            Session *s = (Session *) (ch + 1);
+            ErrorSpec* errorSpec = (ErrorSpec*)(s+1);
+            Resvconfirm* resvconfirm = (Resvconfirm*)(errorSpec+1);
+            Style* style = (Style*)(resvconfirm+1);
+            Flowspec* flowspec = (Flowspec*)(style+1);
+            Filterspec* filterspec = (Filterspec*)(flowspec+1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().src_address == IPAddress(filterspec->src) and
+                    it.value().src_port == filterspec->srcPort and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id){
+                    click_chatter("Forward message...");
+                    output(0).push(make_confirm(p, false, it.value().HOP_addr));
+                }
+            }
         } else {
             click_chatter("Message with unknown message type received:%d", ch->msg_type);
             output(0).push(p);
