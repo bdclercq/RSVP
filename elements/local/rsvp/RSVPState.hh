@@ -21,8 +21,10 @@ struct RSVPState{
 
     IPAddress conf_address = 0;
 
+    uint8_t style_flags = 0;
+    uint8_t style_filter = 10;
+
     uint8_t session_flags = 0;
-    uint8_t session_style = 10;
     uint8_t session_PID = 17;
 
     IPAddress HOP_addr;

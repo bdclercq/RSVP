@@ -266,6 +266,90 @@ Packet *RSVPNode::make_reservation(Packet *p, bool conf, bool isLan, IPAddress n
 }
 
 /////////////////////////////////////////////////////////////////////////
+
+// Path tear message
+Packet *RSVPNode::make_path_tear(Packet* p, bool isLan) {
+
+    int headroom = sizeof(click_ether) + 4;
+    int packetsize = sizeof(click_ip)
+                     + sizeof(RouterOption)
+                     + sizeof(CommonHeader)
+                     + sizeof(Session)
+                     + sizeof(RSVP_HOP)
+                     + sizeof(Sendertemplate)
+                     + sizeof(SenderTSpec);
+
+    int tailroom = 0;
+
+    WritablePacket *q = WritablePacket::make(headroom, 0, packetsize, tailroom);
+
+    if (q == 0){
+        click_chatter("Path tear problem");
+        return 0;
+    }
+
+    memset(q->data(), '\0', packetsize);
+
+    click_ip* oldip = (click_ip*)(p->data());
+    RouterOption* oldRO = (RouterOption*)(oldip+1);
+    CommonHeader *oldch = (CommonHeader *) (oldRO + 1);
+    Session *oldsession = (Session *) (oldch + 1);
+    RSVP_HOP *oldhop = (RSVP_HOP *) (oldsession + 1);
+    Sendertemplate* oldsendertemplate = (Sendertemplate*)(oldhop+1);
+    SenderTSpec* oldspec = (SenderTSpec*)(oldsendertemplate+1);
+
+    click_ip *ip = (click_ip *) q->data();
+    ip->ip_v = 4;
+    ip->ip_hl = sizeof(click_ip) + sizeof(RouterOption) >> 2;
+    ip->ip_len = htons(q->length());
+    ip->ip_id =oldip->ip_id;
+    ip->ip_p = oldip->ip_p;
+    ip->ip_src = oldip->ip_src;
+    ip->ip_dst = oldip->ip_dst;
+    ip->ip_tos = oldip->ip_tos;
+    ip->ip_off = oldip->ip_off;
+    ip->ip_ttl = oldip->ip_ttl;
+    ip->ip_sum = 0;
+
+    q->set_ip_header(ip, ip->ip_hl);
+    q->set_dst_ip_anno(ip->ip_dst);
+
+    RouterOption* RO = (RouterOption*)(ip+1);
+    *RO = *oldRO;
+
+    CommonHeader *ch = (CommonHeader *) (RO + 1);
+    *ch = *oldch;
+
+    Session *session = (Session *) (ch + 1);
+    *session = *oldsession;
+
+    RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
+    *hop = *oldhop;            // (64 body + 16 length + 8 class + 8 ctype) / 8
+    if (isLan) {
+        click_chatter("Going from LAN to WAN");
+        hop->addr = wan_address;
+    }
+        // If wan, send to lan
+    else {
+        click_chatter("Going from WAN to LAN");
+        hop->addr = lan_address;
+    }
+
+    Sendertemplate* sendertemplate = (Sendertemplate*)(hop+1);
+    *sendertemplate = *oldsendertemplate;
+
+    SenderTSpec* spec = (SenderTSpec*)(sendertemplate+1);
+    *spec = *oldspec;
+
+    ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
+    ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
+
+    return q;
+
+}
+
+/////////////////////////////////////////////////////////////////////////
+
 void RSVPNode::push(int input, Packet *p) {
 
     /// IP protocol 46: RSVP
@@ -358,8 +442,9 @@ void RSVPNode::push(int input, Packet *p) {
                     }
                     /// Found the session to which the Resv message belongs
                     it.value().dst_HOP_addr = hop->addr;
-                    it.value().session_flags = style->flags;
-                    it.value().session_style = style->fixed_filter;
+                    it.value().session_flags = s->flags;
+                    it.value().style_flags = style->flags;
+                    it.value().style_filter = style->fixed_filter;
                     it.value().r = flowspec->r;
                     it.value().b = flowspec->b;
                     it.value().p = flowspec->p;
@@ -383,9 +468,26 @@ void RSVPNode::push(int input, Packet *p) {
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
         } else if (ch->msg_type == 5) {
-            click_chatter("Received Path tear message");
+            click_chatter("Received Path tear message on input 0");
             /// Remove path and dependent reservation state
             // Remove session and update hop
+            RouterOption *ro = (RouterOption *) (iph + 1);
+            ch = (CommonHeader *) (ro + 1);
+            Session *s = (Session *) (ch + 1);
+            RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id and
+                    it.value().session_flags == s->flags and
+                    it.value().HOP_addr == hop->addr){
+                    /// Found the session to which the PathTear message belongs
+                    sessions.remove(it.key());
+                    click_chatter("[ [ [ Removed session ] ] ]");
+                    output(0).push(make_path_tear(p, true));
+                }
+            }
+            /// Only pass along
             output(0).push(p);
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
@@ -492,8 +594,9 @@ void RSVPNode::push(int input, Packet *p) {
                     }
                     /// Found the session to which the Resv message belongs
                     it.value().dst_HOP_addr = hop->addr;
-                    it.value().session_flags = style->flags;
-                    it.value().session_style = style->fixed_filter;
+                    it.value().session_flags = s->flags;
+                    it.value().style_flags = style->flags;
+                    it.value().style_filter = style->fixed_filter;
                     it.value().r = flowspec->r;
                     it.value().b = flowspec->b;
                     it.value().p = flowspec->p;
@@ -516,9 +619,25 @@ void RSVPNode::push(int input, Packet *p) {
             /// RFC p25: error messages are simply sent upstream [...] and do not change state
             output(0).push(p);
         } else if (ch->msg_type == 5) {
-            click_chatter("Received Path tear message");
+            click_chatter("Received Path tear message on input 1");
             /// Remove path and dependent reservation state
-            // Remove session and update hop
+            RouterOption *ro = (RouterOption *) (iph + 1);
+            ch = (CommonHeader *) (ro + 1);
+            Session *s = (Session *) (ch + 1);
+            RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+            for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                if (it.value().session_dst == s->dest_addr and
+                    it.value().dst_port == s->dstport and
+                    it.value().session_PID == s->protocol_id and
+                    it.value().session_flags == s->flags and
+                    it.value().HOP_addr == hop->addr){
+                    /// Found the session to which the PathTear message belongs
+                    sessions.remove(it.key());
+                    click_chatter("[ [ [ Removed session ] ] ]");
+                    output(0).push(make_path_tear(p, false));
+                }
+            }
+            /// Only pass along
             output(0).push(p);
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");

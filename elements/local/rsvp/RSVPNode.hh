@@ -45,6 +45,7 @@ public:
     void run_timer(Timer *);
 
     Packet* make_packet(Packet* p, bool isLan);
+    Packet* make_path_tear(Packet* p, bool isLan);
     Packet* make_reservation(Packet* p, bool conf, bool isLan, IPAddress next_hop);
 };
 
