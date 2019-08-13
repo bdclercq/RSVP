@@ -63,7 +63,7 @@ public:
 
     void make_reservation(RSVPState);
 
-    void send_confirmation(RSVPState);
+    Packet* send_confirmation(RSVPState);
 
     void setRSVP(int sid, IPAddress src, uint16_t port);
 

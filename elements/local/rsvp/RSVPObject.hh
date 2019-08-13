@@ -186,10 +186,9 @@ struct ErrorSpec{
 };
 
 struct RouterOption{
-    uint16_t value;
-    uint8_t type;
-    uint8_t length;
-
+    uint8_t type = 148;
+    uint8_t length = 4;
+    uint16_t value = 0;
 };
 
 CLICK_ENDDECLS

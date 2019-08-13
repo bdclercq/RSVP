@@ -11,6 +11,7 @@ elementclass Host {
                 $address:ip/32 0,
                 $address:ipnet 1,
                 0.0.0.0/0 $gateway 1)
+                -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("host_rt[0].pcap") -> Strip(14)
             -> [1]output;
 
         // Shared IP input path
@@ -18,9 +19,11 @@ elementclass Host {
             -> CheckIPHeader // kijkt wa parameters na in de ip-header
             -> rsvpHost // onze host heeft 2 inputs, 1 voor rsvp-pakketten en 1 voor de rest
                         // dit moet je zelf weten wat handiger is voor u :)
+            -> ToDump("host2.pcap")-> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("host.pcap") -> Strip(14)
             -> rt;
 
 	    rt[1]
+	    -> EtherEncap(0x0800, 1:1:1:1:1:1, 2:2:2:2:2:2) -> ToDump("host_rt[1].pcap") -> Strip(14)
             -> ipgw :: IPGWOptions($address)
             -> FixIPSrc($address)
             -> ttl :: DecIPTTL
