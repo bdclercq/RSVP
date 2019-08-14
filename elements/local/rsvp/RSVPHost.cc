@@ -44,7 +44,9 @@ RSVPHost::~RSVPHost() {}
 /////////////////////////////////////////////////////////////////////////
 
 void RSVPHost::run_timer(Timer *) {
-//    click_chatter("run timer");
+    click_chatter("----------------------------------------------");
+    click_chatter("[ [ [ Run timer ] ] ]");
+    click_chatter("----------------------------------------------");
 
     for (HashMap<int, RSVPState>::iterator it = sessions.begin(); it != sessions.end(); it++){
         if ((it.value().src_address == _own_address && it.value().src_port == _own_port)){
@@ -70,7 +72,9 @@ void RSVPHost::run_timer(Timer *) {
 //    click_chatter("reschedule");
     _counter += 1000;
     _timer.reschedule_after_msec(1000);
-//    click_chatter("done");
+    click_chatter("----------------------------------------------");
+    click_chatter("[ [ [ Finished timer ] ] ]");
+    click_chatter("----------------------------------------------");
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -226,8 +230,8 @@ Packet *RSVPHost::make_path_tear(HashMap<int, RSVPState>::Pair* entry) {
     q->set_ip_header(ip, ip->ip_hl);
 
     RouterOption* RO = (RouterOption*)(ip+1);
-    RO->type = htons(148);
-    RO->length = htons(4);
+    RO->type = 148;
+    RO->length = 4;
     RO->value = 0;
 
     CommonHeader *ch = (CommonHeader *) (RO + 1);
@@ -288,7 +292,7 @@ Packet *RSVPHost::make_path_tear(HashMap<int, RSVPState>::Pair* entry) {
 
 /////////////////////////////////////////////////////////////////////////
 
-//Resv tear message
+// Resv tear message
 Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
 
     int headroom = sizeof(click_ether) + 4;
@@ -394,6 +398,7 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
 // Resv message
 void RSVPHost::make_reservation(RSVPState rsvpState) {
 
+    click_chatter("----------------------------------------------");
     click_chatter("Making Resv message at %s", _own_address.unparse().c_str());
 
     if (sessions.size() == 0){
@@ -438,7 +443,7 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     ip->ip_off = 0;
     ip->ip_ttl = 126;
 
-    q->set_dst_ip_anno(rsvpState.HOP_addr);
+    q->set_dst_ip_anno(ip->ip_dst);
     q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
@@ -538,6 +543,7 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
+    click_chatter("----------------------------------------------");
     output(0).push(q);
 
 }
@@ -546,6 +552,8 @@ void RSVPHost::make_reservation(RSVPState rsvpState) {
 
 // Confirmation message
 Packet* RSVPHost::send_confirmation(RSVPState entry) {
+    click_chatter("----------------------------------------------");
+    click_chatter("Creating confirmation message");
     int headroom = sizeof(click_ether) + 4;
     int packetsize =    sizeof(click_ip) +
                         sizeof(RouterOption) +
@@ -556,11 +564,6 @@ Packet* RSVPHost::send_confirmation(RSVPState entry) {
                         sizeof(Style) +
                         sizeof(Flowspec) +
                         sizeof(Filterspec);
-
-    click_chatter("%u, %u, %u, %u, %u, %u, %u, %u, %u",
-            sizeof(click_ip), sizeof(RouterOption), sizeof(CommonHeader), sizeof(Session),
-                  sizeof(ErrorSpec), sizeof(Resvconfirm), sizeof(Style), sizeof(Flowspec),
-                  sizeof(Filterspec));
 
     int tailroom = 0;
 
@@ -575,117 +578,81 @@ Packet* RSVPHost::send_confirmation(RSVPState entry) {
 
     memset(q->data(), '\0', packetsize);
 
-    click_chatter("Type of packet: %s", typeid(q).name());
 
     click_ip *ip = (click_ip *)(q->data());
-    click_chatter("Type of header: %s", typeid(ip).name());
     ip->ip_v = 4;
-    click_chatter("IP v: %u", ip->ip_v);
     ip->ip_hl = sizeof(click_ip) + sizeof(RouterOption) >> 2;
-    click_chatter("IP hl: %u", ip->ip_hl);
     ip->ip_len = htons(q->length());
-    click_chatter("IP len: %u", ntohs(ip->ip_len));
     ip->ip_id = 0;
-    click_chatter("IP id: %u", ip->ip_id);
     ip->ip_p = 46;
-    click_chatter("IP p: %u", ip->ip_p);
     ip->ip_src = _own_address;
-    click_chatter("IP src: %s", IPAddress(ip->ip_src).unparse().c_str());
     ip->ip_dst = entry.dst_HOP_addr;
-    click_chatter("IP dst: %s", IPAddress(ip->ip_dst).unparse().c_str());
     ip->ip_tos = _tos_value;
-    click_chatter("IP tos: %u", ip->ip_tos);
     ip->ip_off = 0;
-    click_chatter("IP offset: %u", ip->ip_off);
     ip->ip_ttl = 126;
-    click_chatter("IP ttl: %u", ip->ip_ttl);
     ip->ip_sum = 0;
 
     q->set_dst_ip_anno(ip->ip_dst);
     q->set_ip_header(ip, ip->ip_hl);
 
     RouterOption* RO = (RouterOption*)(ip+1);
-    click_chatter("Type of RO: %s", typeid(RO).name());
+//    click_chatter("Type of RO: %s", typeid(RO).name());
     if (RO == 0){
         click_chatter("Null pointer");
     }
     RO->type = 148;
-    click_chatter("RO type: %u", RO->type);
     RO->length = 4;
-    click_chatter("RO length: %u", RO->length);
     RO->value = 0;
-    click_chatter("RO value: %u", RO->value);
 
     CommonHeader *ch = (CommonHeader *) (RO + 1);
-    click_chatter("Type of CH: %s", typeid(ch).name());
     if (ch == 0){
         click_chatter("Null pointer");
     }
     ch->version_flags = 16;
-    click_chatter("CH version and flags: %u", ch->version_flags);
     ch->msg_type = 7;
-    click_chatter("CH message type: %u", ch->msg_type);
     ch->length = htons(12 + 12 + 8 + 8 + 8 + 36 + 12);
-    click_chatter("CH length: %u", ntohs(ch->length));
     ch->send_ttl = 127;
-    click_chatter("CH ttl: %u", ch->send_ttl);
     ch->checksum = 0;
 
 //    click_chatter("Add session to Resv Message");
     Session *session = (Session *) (ch + 1);
-    click_chatter("Type of session: %s", typeid(session).name());
     if (session == 0){
         click_chatter("Null pointer");
     }
     session->Class = 1;
     session->C_type = 1;
     session->length = htons(12);        // (64 body + 16 length + 8 class + 8 ctype) / 8
-    click_chatter("session length: %u", ntohs(session->length));
     session->dest_addr = _address;
     session->protocol_id = 17;
-    click_chatter("session PID: %u", session->protocol_id);
     session->flags = 0;
-    click_chatter("session flags: %u", session->flags);
     session->dstport = htons(_port);
-    click_chatter("Session dst and port: %s, %u",IPAddress(session->dest_addr).unparse().c_str(),
-            ntohs(session->dstport));
 
     ErrorSpec* errorSpec = (ErrorSpec*)(session+1);
-    click_chatter("Type of errorspec: %s", typeid(errorSpec).name());
     if (errorSpec == 0){
         click_chatter("Null pointer");
     }
     errorSpec->length = htons(12);
-    click_chatter("Errorspec length: %u", ntohs(errorSpec->length));
     errorSpec->Class = 6;
     errorSpec->C_type = 1;
     errorSpec->address = _own_address;
-    click_chatter("Errorspec address: %s", IPAddress(errorSpec->address).unparse().c_str());
     errorSpec->flags = 0;
-    click_chatter("Errorspec flags: %u", errorSpec->flags);
     errorSpec->error_code = 0;
-    click_chatter("Errorspec error code: %u", errorSpec->error_code);
     errorSpec->error_value = 0;
-    click_chatter("Errorspec error_value: %u", errorSpec->error_value);
 
     Resvconfirm* resvconfirm = (Resvconfirm*)(errorSpec+1);
-    click_chatter("Type of confirm: %s", typeid(resvconfirm).name());
     if (resvconfirm == 0){
         click_chatter("Null pointer");
     }
     resvconfirm->C_type = 1;
     resvconfirm->Class = 15;
     resvconfirm->length = htons(8);     // (32 body + 16 length + 8 class + 8 ctype) / 8
-    click_chatter("Confirm length: %u", ntohs(resvconfirm->length));
     resvconfirm->receiveraddr = _address;
 
     Style* style = (Style*)(resvconfirm+1);
-    click_chatter("Type of style: %s", typeid(style).name());
     if (style == 0){
         click_chatter("Null pointer");
     }
     style->length = htons(8);           // (32 body + 16 length + 8 class + 8 ctype) / 8
-    click_chatter("Style length: %u", ntohs(style->length));
     style->C_type = 1;
     style->Class = 8;
     style->flags = 0;
@@ -694,12 +661,10 @@ Packet* RSVPHost::send_confirmation(RSVPState entry) {
     style->fixed_filter = 10;
 
     Flowspec* flowspec = (Flowspec*)(style+1);
-    click_chatter("Type of flowspec: %s", typeid(flowspec).name());
     if (flowspec == 0){
         click_chatter("Null pointer");
     }
     flowspec->length = htons(36);
-    click_chatter("Flowspec length: %u", ntohs(flowspec->length));
     flowspec->C_type = 2;
     flowspec->Class = 9;
     flowspec->version = 4;
@@ -717,23 +682,21 @@ Packet* RSVPHost::send_confirmation(RSVPState entry) {
     flowspec->M = htonl(15*packetsize);
 
     Filterspec* filterspec = (Filterspec*)(flowspec+1);
-    click_chatter("Type of filterspec: %s", typeid(filterspec).name());
     if (filterspec == 0){
         click_chatter("Null pointer");
     }
     filterspec->length = htons(12);
-    click_chatter("Filterspec length: %u", ntohs(filterspec->length));
     filterspec->Class = 10;
     filterspec->C_type = 1;
     filterspec->src = _own_address;
     filterspec->reserved = 0;
     filterspec->srcPort = htons(_own_port);
-    click_chatter("Filter src and port: %s, %u", _own_address.unparse().c_str(), _own_port);
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip) + sizeof(RouterOption));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
     click_chatter("Pushing confirm message");
+    click_chatter("----------------------------------------------");
     return q;
 //    output(0).push(q);
 }
@@ -748,7 +711,6 @@ void RSVPHost::push(int, Packet *p) {
 //        click_chatter("Received packet with protocol %d", iph->ip_p);
         /// IP protocol 46: RSVP
         if (iph->ip_p == 46){
-            click_chatter("RSVP packet found");
             char *ipc = (char*)(iph);
             ipc += (iph->ip_hl)*4;
             CommonHeader* ch = (CommonHeader*)(ipc);
@@ -769,52 +731,140 @@ void RSVPHost::push(int, Packet *p) {
                         it.value().HOP_addr = hop->addr;
                         it.value().src_address = stemp->src;
                         it.value().src_port = ntohs(stemp->srcPort);
+                        it.value().lifetime = (K + 0.5) + 1.5 * ntohl(t->period);
+                        it.value().refreshPeriod = t->period;
 //                        click_chatter("HOP address: %s", hop->addr.unparse().c_str());
                         p->kill();
+                        click_chatter("Send reservation message");
+                        click_chatter("----------------------------------------------");
                         make_reservation(it.value());
                     }
                 }
             }
             else if (ch->msg_type == 2 && _own_address==iph->ip_dst){
                 click_chatter("Resv message found at %s %u", _own_address.unparse().c_str(), htons(_own_port));
+                ch = (CommonHeader *) (iph + 1);
+                bool conf = false;
+                if (ntohs(ch->length) == 104) {
+                    conf = true;
+                }
                 for (auto it = sessions.begin(); it != sessions.end(); it++){
                     if (it.value().src_address == _own_address && it.value().src_port == _own_port){
                         Session *s = (Session*)(ch+1);
                         RSVP_HOP* hop = (RSVP_HOP*)(s+1);
+                        Time_Value *t = (Time_Value *) (hop + 1);
                         it.value().dst_HOP_addr = hop->addr;
+                        it.value().lifetime = (K + 0.5) + 1.5 * ntohl(t->period);
                         it.value().reserveActive = true;
-                        if (it.value().confRequested){
+                        if (conf){
+                            click_chatter("Send confirmation message");
+                            click_chatter("----------------------------------------------");
                             p->kill();
                             output(0).push(send_confirmation(it.value()));
                         }
-
+                        else{
+                            p->kill();
+                        }
                     }
                 }
             }
             else if (ch->msg_type == 3){
                 click_chatter("Received Path error message");
+                ch = (CommonHeader *) (iph + 1);
+                Session *s = (Session*)(ch+1);
+                ErrorSpec* errorSpec = (ErrorSpec*)(s+1);
+                click_chatter("Error code: %u", errorSpec->error_code);
+                if (errorSpec->error_code == 13){
+                    click_chatter("Unknown object class: %u (these 16 bits represent the Class-num and C-type)", ntohs(errorSpec->error_value));
+                }
+                p->kill();
             }
             else if(ch->msg_type == 4){
                 click_chatter("Received Resv error message");
+                ch = (CommonHeader *) (iph + 1);
+                Session *s = (Session*)(ch+1);
+                RSVP_HOP* hop = (RSVP_HOP*)(s+1);
+                ErrorSpec* errorSpec = (ErrorSpec*)(hop+1);
+                click_chatter("Error code: %u", errorSpec->error_code);
+                if (errorSpec->error_code == 13){
+                    click_chatter("Unknown object class: %u (these 16 bits represent the Class-num and C-type)", ntohs(errorSpec->error_value));
+                }
+                else if (errorSpec->error_code == 06){
+                    click_chatter("Unknown reservation style");
+                }
+                else if (errorSpec->error_code == 14){
+                    click_chatter("Unknown C-type: %u (these 16 bits represent the Class-num and C-type)", ntohs(errorSpec->error_value));
+                }
+                else if (errorSpec->error_code == 21){
+                    click_chatter("Traffic control error");
+                }
+                else if (errorSpec->error_code == 23){
+                    click_chatter("RSVP system error");
+                }
+                p->kill();
             }
             else if(ch->msg_type == 5){
                 click_chatter("Received Path tear message");
-//                for (HashMap<int, RSVPState>::iterator it = sessions.begin(); it != sessions.end(); it++){
-//                    if (it.value().)
-//                    click_chatter("Erasing state %i for %s", it.key(), it.value().session_dst.unparse().c_str());
-//                    sessions.remove(it.key());
-//                }
+                RouterOption *ro = (RouterOption *) (iph + 1);
+                ch = (CommonHeader *) (ro + 1);
+                Session *s = (Session *) (ch + 1);
+                RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+                Sendertemplate *sendertemplate = (Sendertemplate *) (hop + 1);
+                for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                    if (it.value().src_address == sendertemplate->src and
+                        it.value().src_port == sendertemplate->srcPort and
+                        it.value().session_dst == s->dest_addr and
+                        it.value().dst_port == s->dstport and
+                        it.value().session_PID == s->protocol_id and
+                        it.value().session_flags == s->flags and
+                        it.value().HOP_addr == hop->addr){
+                        /// Found the session to which the PathTear message belongs
+                        sessions.remove(it.key());
+                        click_chatter("[ [ [ Removed path state and dependent reservation state ] ] ]");
+                        click_chatter("----------------------------------------------");
+                        p->kill();
+                    }
+                }
+                /// Discard
+                click_chatter("No matching state: discard path tear (RFC p41).");
+                p->kill();
+                click_chatter("----------------------------------------------");
             }
             else if(ch->msg_type == 6){
                 click_chatter("Received Resv tear message");
+                ch = (CommonHeader *) (iph + 1);
+                Session *s = (Session*)(ch+1);
+                RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
+                Style* style = (Style*)(hop+1);
+                Flowspec* flowspec = (Flowspec*)(style+1);
+                Filterspec* filterspec = (Filterspec*)(flowspec+1);
+                for (auto it = sessions.begin(); it != sessions.end(); it++) {
+                    if (it.value().src_address == filterspec->src and
+                        it.value().src_port == filterspec->srcPort and
+                        it.value().session_dst == s->dest_addr and
+                        it.value().dst_port == s->dstport and
+                        it.value().session_PID == s->protocol_id and
+                        it.value().session_flags == s->flags and
+                        it.value().HOP_addr == hop->addr){
+                        /// Found the session to which the PathTear message belongs
+                        it.value().session_dst = 0;
+                        it.value().conf_address = 0;
+                        it.value().reserveActive = false;
+                        click_chatter("[ [ [ Removed reservation state ] ] ]");
+                        click_chatter("----------------------------------------------");
+                        p->kill();
+                    }
+                }
             }
             else if(ch->msg_type == 7){
-                click_chatter("Received Confirm  message");
+                click_chatter("Received Confirm message");
+                p->kill();
             }
             // Pass the packet to the next hop and update states
             else{
                 click_chatter("Received unknown packet at host %s", iph->ip_dst);
                 click_chatter("Type of unknown packet: %s", typeid(p).name());
+                click_chatter("----------------------------------------------");
                 output(0).push(p);
             }
 

@@ -7,23 +7,6 @@
 
 CLICK_DECLS
 
-struct uint24_t{
-    unsigned int data : 24;
-};
-
-struct uint4_t{
-    unsigned int data : 4;
-};
-
-// Te veel miserie
-//struct SessionInfo{
-//    uint32_t dest_addr;
-//    uint16_t dstport;
-//
-//    bool operator<(const SessionInfo s) const{
-//        return s.dest_addr<dest_addr && s.dstport<dstport;
-//    }
-//};
 
 struct CommonHeader{
     uint8_t version_flags = 16; // version = 1, no flags

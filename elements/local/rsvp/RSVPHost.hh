@@ -32,6 +32,7 @@ private:
     uint64_t _identification;
 
     int _tos_value = 184;
+    unsigned K = 3;
 
 public:
     RSVPHost();
