@@ -323,16 +323,16 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     ip->ip_dst = entry->value.src_address;
     ip->ip_tos = _tos_value;
     ip->ip_off = 0;
-    ip->ip_ttl = 64;
+    ip->ip_ttl = 126;
     ip->ip_sum = 0;
 
-    q->set_dst_ip_anno(entry->value.src_address);
+    q->set_dst_ip_anno(ip->ip_dst);
     q->set_ip_header(ip, ip->ip_hl);
 
     CommonHeader *ch = (CommonHeader *) (ip + 1);
     ch->version_flags = 16;
     ch->msg_type = 6;
-    ch->length = htons(8 + 12 + 12 + 12 + 36);
+    ch->length = htons(8 + 8 + 12 + 12 + 12 + 36);
     ch->send_ttl = 127;
     ch->checksum = 0;
 
@@ -340,10 +340,10 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     session->Class = 1;
     session->C_type = 1;
     session->length = htons(12);        // (64 body + 16 length + 8 class + 8 ctype) / 8
-    session->dest_addr = entry->value.src_address;
+    session->dest_addr = _own_address;
     session->protocol_id = 17;
     session->flags = 0;
-    session->dstport = htons(entry->value.src_port);
+    session->dstport = htons(entry->value.dst_port);
 
     RSVP_HOP *hop = (RSVP_HOP *) (session + 1);
     hop->Class = 3;
@@ -365,7 +365,7 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     flowspec->length = htons(36);
     flowspec->C_type = 2;
     flowspec->Class = 9;
-    flowspec->version = 4;
+    flowspec->version = 0;
     flowspec->res = 12;
     flowspec->total_length = htons(7);
     flowspec->service = 5;
@@ -383,9 +383,9 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     filterspec->length = htons(12);
     filterspec->Class = 10;
     filterspec->C_type = 1;
-    filterspec->src = _own_address;
+    filterspec->src = entry->value.src_address;
     filterspec->reserved = 0;
-    filterspec->srcPort = htons(_own_port);
+    filterspec->srcPort = htons(entry->value.src_port);
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
     ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
