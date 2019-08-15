@@ -689,7 +689,7 @@ void RSVPNode::push(int input, Packet *p) {
                 }
             }
             if (not found){
-                click_chatter("No matching state: discard path tear (RFC p41).");
+                click_chatter("No matching state: discard resv tear (RFC p41).");
                 p->kill();
                 click_chatter("----------------------------------------------");
             }
@@ -952,7 +952,7 @@ void RSVPNode::push(int input, Packet *p) {
                 }
             }
             if (not found){
-                click_chatter("No matching state: discard path tear (RFC p41).");
+                click_chatter("No matching state: discard resv tear (RFC p41).");
                 p->kill();
                 click_chatter("----------------------------------------------");
             }
