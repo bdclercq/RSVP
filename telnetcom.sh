@@ -17,3 +17,4 @@
 sleep 10; (sleep 0.5; echo 'write host2/rsvpHost.reserve ID 1, CONF 1') | telnet localhost 10004 #sent reserve messages
 #als resv message aankomt: set TOS byte
 #sleep 10; (sleep 0.5; echo 'write host1/rsvpHost.release ID 1') | telnet localhost 10001
+sleep 10; (sleep 0.5; echo 'write host2/rsvpHost.release ID 1') | telnet localhost 10004

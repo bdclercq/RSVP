@@ -388,6 +388,7 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     filterspec->srcPort = htons(_own_port);
 
     ip->ip_sum = click_in_cksum((unsigned char *) ip, sizeof(click_ip));
+    ch->checksum = click_in_cksum((unsigned char *) q->data(), q->length());
 
     return q;
 
@@ -1056,20 +1057,24 @@ void RSVPHost::tearPath(int sid) {
     HashMap<int, RSVPState>::Pair* entry = sessions.find_pair(sid);
 
     if(entry != NULL){
-        if (entry->value.src_address == _own_address){
+        if (entry->value.src_address == _own_address and entry->value.session_dst != 0){
             // Path Tear
             Packet* q = make_path_tear(entry);
+            sessions.remove(sid);
             click_chatter("Sending path tear");
             output(0).push(q);
         }
         else if (entry->value.session_dst == _own_address){
             // Resv Tear
             Packet* q = make_resv_tear(entry);
+            entry->value.session_dst = 0;
+            entry->value.conf_address = 0;
+            entry->value.reserveActive = false;
+            click_chatter("[ [ [ Removed reservation state ] ] ]");
+            click_chatter("----------------------------------------------");
             output(0).push(q);
         }
     }
-
-    sessions.remove(sid);
 }
 
 /////////////////////////////////////////////////////////////////////////
