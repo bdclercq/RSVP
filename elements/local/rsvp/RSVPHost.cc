@@ -320,7 +320,7 @@ Packet *RSVPHost::make_resv_tear(HashMap<int, RSVPState>::Pair* entry) {
     ip->ip_id = 0;
     ip->ip_p = 46;
     ip->ip_src = _own_address;
-    ip->ip_dst = entry->value.src_address;
+    ip->ip_dst = entry->value.HOP_addr;
     ip->ip_tos = _tos_value;
     ip->ip_off = 0;
     ip->ip_ttl = 126;

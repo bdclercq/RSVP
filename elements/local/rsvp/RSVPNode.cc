@@ -631,6 +631,7 @@ void RSVPNode::push(int input, Packet *p) {
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
             Sendertemplate *sendertemplate = (Sendertemplate *) (hop + 1);
+            bool found = false;
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
                 if (it.value().src_address == sendertemplate->src and
                     it.value().src_port == sendertemplate->srcPort and
@@ -641,6 +642,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().HOP_addr == hop->addr){
                     /// Found the session to which the PathTear message belongs
                     sessions.remove(it.key());
+                    found = true;
                     click_chatter("[ [ [ Removed path state and dependent reservation state ] ] ]");
                     click_chatter("Forward message...");
                     click_chatter("----------------------------------------------");
@@ -648,10 +650,11 @@ void RSVPNode::push(int input, Packet *p) {
                 }
             }
             /// Discard
-            click_chatter("No matching state: discard path tear (RFC p41).");
-            p->kill();
-            click_chatter("----------------------------------------------");
-//            output(0).push(p);
+            if (not found){
+                click_chatter("No matching state: discard path tear (RFC p41).");
+                p->kill();
+                click_chatter("----------------------------------------------");
+            }
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
             /// Remove reservation state
@@ -661,6 +664,7 @@ void RSVPNode::push(int input, Packet *p) {
             Style* style = (Style*)(hop+1);
             Flowspec* flowspec = (Flowspec*)(style+1);
             Filterspec* filterspec = (Filterspec*)(flowspec+1);
+            bool found = false;
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
                 if (it.value().src_address == filterspec->src and
                     it.value().src_port == filterspec->srcPort and
@@ -673,6 +677,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().session_dst = 0;
                     it.value().conf_address = 0;
                     it.value().reserveActive = false;
+                    found = true;
                     click_chatter("[ [ [ Removed reservation state ] ] ]");
                     click_chatter("----------------------------------------------");
                     iph->ip_sum = 0;
@@ -683,8 +688,11 @@ void RSVPNode::push(int input, Packet *p) {
                     output(0).push(p);
                 }
             }
-            click_chatter("No matching state: discard path tear (RFC p41).");
-            p->kill();
+            if (not found){
+                click_chatter("No matching state: discard path tear (RFC p41).");
+                p->kill();
+                click_chatter("----------------------------------------------");
+            }
         } else if (ch->msg_type == 7) {
             click_chatter("Received Confirm  message on input 0");
             RouterOption *ro = (RouterOption *) (iph + 1);
@@ -885,6 +893,7 @@ void RSVPNode::push(int input, Packet *p) {
             Session *s = (Session *) (ch + 1);
             RSVP_HOP *hop = (RSVP_HOP *) (s + 1);
             Sendertemplate *sendertemplate = (Sendertemplate *) (hop + 1);
+            bool found = false;
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
                 if (it.value().src_address == sendertemplate->src and
                     it.value().src_port == sendertemplate->srcPort and
@@ -895,6 +904,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().HOP_addr == hop->addr){
                     /// Found the session to which the PathTear message belongs
                     sessions.remove(it.key());
+                    found = true;
                     click_chatter("[ [ [ Removed path state and dependent reservation state ] ] ]");
                     click_chatter("Forwarding message ...");
                     click_chatter("----------------------------------------------");
@@ -902,9 +912,11 @@ void RSVPNode::push(int input, Packet *p) {
                 }
             }
             /// Discard
-            click_chatter("No matching state: discard path tear (RFC p41).");
-            p->kill();
-            click_chatter("----------------------------------------------");
+            if (not found){
+                click_chatter("No matching state: discard path tear (RFC p41).");
+                p->kill();
+                click_chatter("----------------------------------------------");
+            }
 //            output(0).push(p);
         } else if (ch->msg_type == 6) {
             click_chatter("Received Resv tear message");
@@ -915,6 +927,7 @@ void RSVPNode::push(int input, Packet *p) {
             Style* style = (Style*)(hop+1);
             Flowspec* flowspec = (Flowspec*)(style+1);
             Filterspec* filterspec = (Filterspec*)(flowspec+1);
+            bool found = false;
             for (auto it = sessions.begin(); it != sessions.end(); it++) {
                 if (it.value().src_address == filterspec->src and
                     it.value().src_port == filterspec->srcPort and
@@ -927,6 +940,7 @@ void RSVPNode::push(int input, Packet *p) {
                     it.value().session_dst = 0;
                     it.value().conf_address = 0;
                     it.value().reserveActive = false;
+                    found = true;
                     click_chatter("[ [ [ Removed reservation state ] ] ]");
                     click_chatter("----------------------------------------------");
                     iph->ip_sum = 0;
@@ -937,8 +951,11 @@ void RSVPNode::push(int input, Packet *p) {
                     output(0).push(p);
                 }
             }
-            click_chatter("No matching state: discard path tear (RFC p41).");
-            p->kill();
+            if (not found){
+                click_chatter("No matching state: discard path tear (RFC p41).");
+                p->kill();
+                click_chatter("----------------------------------------------");
+            }
         } else if (ch->msg_type == 7) {
             click_chatter("Received Confirm  message on input 1");
             RouterOption *ro = (RouterOption *) (iph + 1);
